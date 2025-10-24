@@ -1,0 +1,481 @@
+---
+title: "002more-analysis"
+author: "SimanNing"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###### Do some initial analysis on the frequency counts of variables
+```{r cars}
+load("D:/01PHD/000NREL_SCORE/04analysis/data/useful_set.RData") ##will load df2 exactly same
+data <- df2[,-c(1:8,10:14,16)]
+
+unwanted_string <- c("\\$\\{q://QID3/ChoiceGroup/SelectedChoices\\}")
+data<- as.data.frame(
+  lapply(data, function(column) gsub(unwanted_string, "", column)),
+  stringsAsFactors = FALSE
+)
+data$age <- as.numeric(data$age)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+library(table1)
+# paste(names(data), collapse = " + ")
+table1(~  primary_reason_facility_selected | neighborhood, data=data)
+
+library(table1)
+table1(~ age  + gender + work_location + home_ownership + housing_type + household_size + household_race_selected + hispanic_latino_count + hh_income + education_level + condition_worsened_by_outage + electric_device_dependent + prescription_med + primary_transport_mode_selected + vehicle_count + energy_sources_selected + backup_energy_system + seattle_city_light_bill + seattle_city_light_discounts + greenup_participant + shutoff_notice + bill_affordability | neighborhood, data=data)
+       
+table1(~  location_use_frequency_pharmacy + location_use_frequency_grocery_store + location_use_frequency_convenience_store + location_use_frequency_food_bank + location_use_frequency_school + location_use_frequency_gas_station + location_use_frequency_community_center + location_use_frequency_worship + location_use_frequency_bank + location_use_frequency_doctor + location_use_frequency_dialysis + location_use_frequency_hardware_store + location_use_frequency_trusted_hh | neighborhood, data=data)
+         
+table1(~     shelf_stable_food_days + bottled_water_days + emergency_savings + power_outage_experience + outage_concern_description + affordability_worry + activity_disruption_adaptation_selected + activity_disruption_health_impact_selected + disrupted_health_impact_selected + health_impact_explanation + relocation_option + community_outage_concern_selected + outage_need_adaptation_food + outage_need_adaptation_healthcare + outage_need_adaptation_food_cooling + outage_need_adaptation_cooking + outage_need_adaptation_washing + outage_need_adaptation_comfort + outage_need_adaptation_lighting + outage_need_adaptation_info + outage_need_adaptation_comm + primary_reason_facility_selected + same_facility_during_outage + future_activity_contact + survey_source_selected | neighborhood, data=data) #+ neighborhood
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+library(tidyverse)
+data_NA_filled <- data %>% mutate(across(everything(), ~ replace_na(.x, "missing")))
+
+
+# Assume 'data' is your dataframe and 'col1' to 'col10' are the columns to combine
+data_combined <- data %>%
+  unite(col = "combined_pharmacy", 
+        c("typical_pharmacy_selected" ,"typical_pharmacy_other" , "typical_pharmacy_1", "typical_pharmacy_2", "typical_pharmacy_3", "typical_pharmacy_4", "typical_pharmacy_5", "typical_pharmacy_6",   "typical_pharmacy_7",   "typical_pharmacy_8" , "typical_pharmacy_9" , "typical_pharmacy_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining
+  unite(col = "combined_grocery_store", 
+        c("typical_grocery_store_selected", "typical_grocery_store_other" , "typical_grocery_store_1", "typical_grocery_store_2", "typical_grocery_store_3", "typical_grocery_store_4", "typical_grocery_store_5", "typical_grocery_store_6",   "typical_grocery_store_7",   "typical_grocery_store_8" , "typical_grocery_store_9" , "typical_grocery_store_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% # Removes NA values before combining
+  unite(col = "combined_convenience_store", 
+        c("typical_convenience_store_selected" ,"typical_convenience_store_other" , "typical_convenience_store_1", "typical_convenience_store_2", "typical_convenience_store_3", "typical_convenience_store_4", "typical_convenience_store_5", "typical_convenience_store_6",   "typical_convenience_store_7",   "typical_convenience_store_8" , "typical_convenience_store_9" , "typical_convenience_store_10" ), sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining
+  unite(col = "combined_food_bank", 
+        c("typical_food_bank_selected", "typical_food_bank_other" , "typical_food_bank_1", "typical_food_bank_2", "typical_food_bank_3", "typical_food_bank_4", "typical_food_bank_5", "typical_food_bank_6",   "typical_food_bank_7",   "typical_food_bank_8" , "typical_food_bank_9" , "typical_food_bank_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining  
+  unite(col = "combined_school", 
+        c("typical_school_selected" ,"typical_school_other" , "typical_school_1", "typical_school_2", "typical_school_3", "typical_school_4", "typical_school_5", "typical_school_6",   "typical_school_7",   "typical_school_8" , "typical_school_9" , "typical_school_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining
+  unite(col = "combined_gas_station", 
+        c("typical_gas_station_selected" ,"typical_gas_station_other" , "typical_gas_station_1", "typical_gas_station_2", "typical_gas_station_3", "typical_gas_station_4", "typical_gas_station_5", "typical_gas_station_6",   "typical_gas_station_7",   "typical_gas_station_8" , "typical_gas_station_9" , "typical_gas_station_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining  
+  unite(col = "combined_community_center", 
+        c("typical_community_center_selected" ,"typical_community_center_other" , "typical_community_center_1", "typical_community_center_2", "typical_community_center_3", "typical_community_center_4", "typical_community_center_5", "typical_community_center_6",   "typical_community_center_7",   "typical_community_center_8" , "typical_community_center_9" , "typical_community_center_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining  
+  unite(col = "combined_worship_place", 
+        c("typical_worship_place_selected" , "typical_worship_place_other" , "typical_worship_place_1", "typical_worship_place_2", "typical_worship_place_3", "typical_worship_place_4", "typical_worship_place_5", "typical_worship_place_6",   "typical_worship_place_7",   "typical_worship_place_8" , "typical_worship_place_9" , "typical_worship_place_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining  
+  unite(col = "combined_bank", 
+        c("typical_bank_selected" , "typical_bank_other" , "typical_bank_1", "typical_bank_2", "typical_bank_3", "typical_bank_4", "typical_bank_5", "typical_bank_6",   "typical_bank_7",   "typical_bank_8" , "typical_bank_9" , "typical_bank_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining  
+  unite(col = "combined_doctor", 
+        c("typical_doctor_selected" ,"typical_doctor_other" , "typical_doctor_1", "typical_doctor_2", "typical_doctor_3", "typical_doctor_4", "typical_doctor_5", "typical_doctor_6",   "typical_doctor_7",   "typical_doctor_8" , "typical_doctor_9" , "typical_doctor_10" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%# Removes NA values before combining
+  unite(col = "combined_hardware_store", 
+        c("typical_hardware_store_selected" ,"typical_hardware_store_other" , "typical_hardware_store_1", "typical_hardware_store_2", "typical_hardware_store_3", "typical_hardware_store_4", "typical_hardware_store_5", "typical_hardware_store_6",   "typical_hardware_store_7",   "typical_hardware_store_8" , "typical_hardware_store_9" , "typical_hardware_store_10" , "typical_hardware_store_11" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) 
+
+
+data_combined <- data_combined %>%
+  unite(col = "combined_food_access_location", 
+        c("food_access_location_selected" ,"food_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_food_cooling_access_location", 
+        c("food_cooling_access_location_selected" ,"food_cooling_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_cooking_access_location", 
+        c("cooking_access_location_selected" ,"cooking_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_med_cooling_access_location", 
+        c("med_cooling_access_location_selected" ,"med_cooling_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_healthcare_device_access_location", 
+        c("healthcare_device_access_location_selected" ,"healthcare_device_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_washing_access_location_location", 
+        c("washing_access_location_selected" ,"washing_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_comfort_access_location", 
+        c("comfort_access_location_selected" ,"comfort_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_lighting_access_location", 
+        c("lighting_access_location_selected" ,"lighting_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_info_access_location", 
+        c("info_access_location_selected" ,"info_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_comm_access_location", 
+        c("comm_access_location_selected" ,"comm_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_other_task_location", 
+        c("other_task_location_selected" ,"other_task_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>%
+  unite(col = "combined_primary_reason_facility", 
+        c("primary_reason_facility_selected" ,"primary_reason_facility_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) 
+
+data_combined <- data_combined %>%
+  unite(col = "combined_relocation_location", 
+        c("relocation_location_selected" ,"relocation_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% 
+  unite(col = "combined_energy_sources", 
+        c("energy_sources_selected" ,"energy_sources_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% 
+  unite(col = "combined_backup_energy_system_type", #
+        c("backup_energy_system_type_selected" ,"backup_energy_system_type_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% 
+  unite(col = "combined_activity_disruption_adaptation", 
+        c("activity_disruption_adaptation_selected" ,"activity_disruption_adaptation_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% 
+  unite(col = "combined_activity_disruption_health_impact", 
+        c("activity_disruption_health_impact_selected" ,"activity_disruption_health_impact_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE)  %>% 
+  unite(col = "combined_disrupted_health_impact", 
+        c("disrupted_health_impact_selected" ,"disrupted_health_impact_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE)  %>% 
+  unite(col = "combined_community_outage_concern", 
+        c("community_outage_concern_selected" ,"community_outage_concern_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE)  %>% 
+  unite(col = "combined_healthcare_access_location", 
+        c("healthcare_access_location_selected" ,"healthcare_access_location_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) 
+
+data_combined <- data_combined %>% 
+  unite(col = "combined_gender", 
+        c("gender" ,"gender_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% 
+  unite(col = "combined_home_ownership", 
+        c("home_ownership" ,"home_ownership_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% 
+  unite(col = "combined_housing_type", 
+        c("housing_type" ,"housing_type_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% 
+  unite(col = "combined_languages", 
+        c("user_language" ,"languages_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) %>% 
+  unite(col = "combined_primary_transport_mode", 
+        c("primary_transport_mode_selected" ,"primary_transport_mode_other" ), 
+        sep = "; ", # You can change the separator to any character (e.g., comma, empty string)
+        na.rm = TRUE) 
+data_combined <- data_combined %>% mutate(across(everything(), ~ replace_na(.x, "missing")))
+
+data_combined$age_group <- cut(data$age,
+                      breaks = c(18, 25, 35, 45, 55, 65, 75, 85, 95, 100),  # Adjust breaks to match labels
+                      right = FALSE,                    # Make intervals closed on the left (e.g., [18, 25))
+                      labels = c("18-25", "25-35", "35-45", "45-55", "55-65", "65-75", "75-85", "85-95", "95-100"))
+
+save(data_combined, file="D:/01PHD/000NREL_SCORE/04analysis/data/combined_data_choice_1021.Rdata")
+
+
+
+other_columns <- data_combined %>% select(ends_with("_other")) %>% colnames()
+other_columns
+
+com_columns <- data_combined %>% select(starts_with("combined")) %>% colnames()
+com_columns
+# Assuming your data is in a data frame called 'data'
+columns_with_more_than_16_na <- names(data)[colSums(is.na(data)) > 16]
+
+```
+
+```{r}
+library(tidyverse)
+
+# Define the function
+word_frequency_by_nb <- function(data, text_columns, nb_column) {
+  # Loop through each text column
+  word_counts <- map_dfr(text_columns, function(column) {
+    data %>%
+      # Clean the text: remove unwanted patterns, make lowercase, and remove "'s"
+      mutate(cleaned_text = .data[[column]]) %>%
+      mutate(cleaned_text = str_replace_all(cleaned_text, "(?i)Other \\(Please explain\\):;|\\(Please explain\\):;|None|Other (Please Explain):| cheaper|Other (Please explain):
+", "")) %>%
+      mutate(cleaned_text = str_to_title(cleaned_text)) %>%
+      mutate(cleaned_text = str_replace_all(cleaned_text, "'s", "")) %>%
+      # Split into individual words based on ',' or ';'
+      mutate(words = str_split(cleaned_text, "[,;]+")) %>% #"[,;\\s*]+/"
+      # Unnest the list of words into rows
+      unnest(words) %>%
+      # Trim any whitespace around words
+      mutate(words = str_trim(words)) %>%
+      # Group by NB column and word
+      group_by(!!sym(nb_column), column_name = column, words) %>%
+      # Count occurrences
+      count(name = "frequency")
+  })
+  
+  # Pivot the table to have NB as columns, words as rows, and frequencies as values
+  word_counts_pivot <- word_counts %>%
+    pivot_wider(names_from = !!sym(nb_column), 
+                values_from = frequency, 
+                values_fill = list(frequency = 0)) %>%
+    arrange(column_name, words)
+
+  return(word_counts_pivot)
+}
+
+data_combined$combined_gas_station
+# Example usage
+# Assuming 'data' is your dataframe, 'NB' is the grouping column, and c("names_column1", "names_column2") are the text columns
+word_freq_result <- word_frequency_by_nb(data_combined, c("combined_grocery_store", "combined_convenience_store", "combined_gas_station", "combined_food_bank"  , "combined_school"    ,"combined_community_center" ,  "combined_worship_place" , "combined_bank" , "combined_doctor" , "combined_hardware_store","typical_dialysis_center_selected" ), "neighborhood")
+
+unique(data_combined$typical_dialysis_center_selected)
+## separate one dataframe into several dataframe by parsing one column
+# Assuming 'data' is your dataframe, 'NB' is the grouping column, and c("names_column1", "names_column2") are the text columns
+
+unique(data_combined$typical_dialysis_center_selected)
+
+NB_RB <- data_combined %>% filter(neighborhood == "Rainier Beach") %>% word_frequency_by_nb(., c("combined_grocery_store", "combined_convenience_store", "combined_gas_station", "combined_food_bank"  , "combined_school"    ,"combined_community_center" ,  "combined_worship_place" , "combined_bank" , "combined_doctor" , "combined_hardware_store","typical_dialysis_center_selected" ), "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+NB_SP <- data_combined %>% filter(neighborhood == "South Park") %>% word_frequency_by_nb(., c("combined_grocery_store", "combined_convenience_store", "combined_gas_station", "combined_food_bank"  , "combined_school"    ,"combined_community_center" ,  "combined_worship_place" , "combined_bank" , "combined_doctor" , "combined_hardware_store","typical_dialysis_center_selected"  ), "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+NB_HP <- data_combined %>% filter(neighborhood == "Highland Park") %>% word_frequency_by_nb(., c("combined_grocery_store", "combined_convenience_store", "combined_gas_station", "combined_food_bank"  , "combined_school"    ,"combined_community_center" ,  "combined_worship_place" , "combined_bank" , "combined_doctor" , "combined_hardware_store" ,"typical_dialysis_center_selected" ), "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+NB_GT <- data_combined %>% filter(neighborhood == "Georgetown") %>% word_frequency_by_nb(., c("combined_grocery_store", "combined_convenience_store", "combined_gas_station", "combined_food_bank"  , "combined_school"    ,"combined_community_center" ,  "combined_worship_place" , "combined_bank" , "combined_doctor" , "combined_hardware_store" ,"typical_dialysis_center_selected" ), "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+NB_DL <- data_combined %>% filter(neighborhood == "Dunlap") %>% word_frequency_by_nb(., c("combined_grocery_store", "combined_convenience_store", "combined_gas_station", "combined_food_bank"  , "combined_school"    ,"combined_community_center" ,  "combined_worship_place" , "combined_bank" , "combined_doctor" , "combined_hardware_store" ,"typical_dialysis_center_selected" ), "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+NB_SBH <- data_combined %>% filter(neighborhood == "South Beacon Hill") %>% word_frequency_by_nb(., c("combined_grocery_store", "combined_convenience_store", "combined_gas_station", "combined_food_bank"  , "combined_school"    ,"combined_community_center" ,  "combined_worship_place" , "combined_bank" , "combined_doctor" , "combined_hardware_store" ,"typical_dialysis_center_selected" ), "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+##use the NB_RB as an example, get the column name and words
+all_frequency_counts <- rbind(NB_RB, NB_SP, NB_HP, NB_GT, NB_DL, NB_SBH) 
+##remove rows that are blank or " "
+
+empty_rows <- grepl("^\\s*$", all_frequency_counts$words)
+all_frequency_counts <- all_frequency_counts[!empty_rows,]
+
+##check how many NA or empty data in the dataframe
+a<-data_combined %>% summarise_all(~sum(is.na(.)))
+
+write.csv(word_freq_result, "D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency.csv")
+
+# write.csv(all_frequency_counts, "D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB.csv")
+
+typical_columns <- data %>% select(ends_with("selected")) %>% colnames()
+typical_columns
+# Assuming 'data' is your dataframe, 'NB' is the grouping column, and c("names_column1", "names_column2") are the text columns
+word_freq_result_selected <- word_frequency_by_nb(data, c("typical_pharmacy_selected" ,"typical_grocery_store_selected", "typical_convenience_store_selected", "typical_food_bank_selected"  , "typical_school_selected" ,"typical_gas_station_selected" , "typical_community_center_selected"   ,"typical_worship_place_selected" , "typical_bank_selected",    "typical_doctor_selected" , "typical_dialysis_center_selected" ), "neighborhood")
+
+write.csv(word_freq_result_selected, "D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_typical_selected.csv")
+# Display the result
+print(word_freq_result)
+
+data_combined$location_use_frequency_grocery_store 
+```
+
+```{r remake the frequency table only to weekly and daily}
+##write a function, select a particular frequency category column (e.g.location_use_frequency_grocery_store), only filter those with weekly and daily, and then use the word_frequency_by_nb function to get the frequency table of the grocery store. Do this to all the columns that have frequency in them.
+###left join the 
+library(readxl)
+new_freq_bluesky_join <- read_excel("D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB_Siman_Cleaned_11_13.xlsx")%>% select(c("words",`New Name`,"neighborhood"))
+
+bank <- data_combined %>% filter(location_use_frequency_bank %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_bank", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+grocery <- data_combined %>% filter(location_use_frequency_grocery_store %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_grocery_store", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+convenience <- data_combined %>% filter(location_use_frequency_convenience_store %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_convenience_store", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+gas <- data_combined %>% filter(location_use_frequency_gas_station %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_gas_station", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+food_bank <- data_combined %>% filter(location_use_frequency_food_bank %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_food_bank", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+school <- data_combined %>% filter(location_use_frequency_school %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_school", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+commmunity_center <- data_combined %>% filter(location_use_frequency_community_center %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_community_center", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+
+
+worship_place <- data_combined %>% filter(location_use_frequency_worship %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_worship_place", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+doctor <- data_combined %>% filter(location_use_frequency_doctor %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_doctor", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+hardware_store <- data_combined %>% filter(location_use_frequency_hardware_store %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_hardware_store", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+dialysis <- data_combined %>% filter(location_use_frequency_dialysis %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "typical_dialysis_center_selected", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+pharmacy <- data_combined %>% filter(location_use_frequency_pharmacy %in% c("Weekly" , "Daily")) %>% word_frequency_by_nb(., "combined_pharmacy", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+data_combined  %>% word_frequency_by_nb(., "typical_dialysis_center_selected", "neighborhood")
+
+##combine all the frequency tables into one
+all_frequency_counts_daily_weekly <- rbind(bank, grocery, convenience, gas, food_bank, school, commmunity_center, worship_place, doctor, hardware_store, dialysis,pharmacy)%>% filter(frequency> 0)
+
+all_frequency_counts_daily_weekly_new <- all_frequency_counts_daily_weekly %>% left_join(new_freq_bluesky_join, by = c("words" = "words","neighborhood" = "neighborhood"))
+
+
+all_frequency_counts_daily_weekly_new <- all_frequency_counts_daily_weekly_new %>% mutate(all_new_name = ifelse(is.na(`New Name`), words, `New Name`)) %>% filter(all_new_name != "N/A" & all_new_name != "Other (Please explain):" & all_new_name != "Other (Please Explain):" & all_new_name != "Cheaper" & all_new_name != " " &all_new_name != "") #%>% filter_all(all_vars(!str_detect(., "^\\s*$")))
+
+
+
+
+###pivot into a wide table
+
+all_frequency_counts_daily_weekly_wider <- all_frequency_counts_daily_weekly_new %>%
+  group_by(all_new_name, column_name, neighborhood) %>%
+  summarise(total = sum(frequency)) %>%
+  tidyr::pivot_wider(names_from = neighborhood, values_from = total,   values_fill = 0) ## sort by the column name
+
+
+all_frequency_counts_daily_weekly_wider$total_count = rowSums(all_frequency_counts_daily_weekly_wider[3:8]) 
+
+
+### ascend in the column name and then descend in  total count
+
+
+all_frequency_counts_daily_weekly_wider <- 
+all_frequency_counts_daily_weekly_wider %>% arrange( column_name, desc(total_count))
+
+# write.csv(all_frequency_counts_daily_weekly_new, "D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB_Leah_Cleaned_11_11_daily_weekly.csv")
+
+write.csv(all_frequency_counts_daily_weekly_wider, "D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB_Siman_Cleaned_11_11_daily_weekly_wide.csv")
+
+
+
+```
+
+
+```{r remake the frequency table to all with updated names 12.07}
+##write a function, select a particular frequency category column (e.g.location_use_frequency_grocery_store), only filter those with weekly and daily, and then use the word_frequency_by_nb function to get the frequency table of the grocery store. Do this to all the columns that have frequency in them.
+###left join the 
+library(readxl)
+new_freq_bluesky_join <- read_excel("D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB_Siman_Cleaned_11_13.xlsx")%>% select(c("words",`New Name`,"neighborhood"))
+
+bank_all <- data_combined %>% word_frequency_by_nb(., "combined_bank", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+grocery_all <- data_combined  %>% word_frequency_by_nb(., "combined_grocery_store", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+convenience_all <- data_combined  %>% word_frequency_by_nb(., "combined_convenience_store", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+gas_all <- data_combined %>% word_frequency_by_nb(., "combined_gas_station", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+food_bank_all <- data_combined %>% word_frequency_by_nb(., "combined_food_bank", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+school_all <- data_combined  %>% word_frequency_by_nb(., "combined_school", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+commmunity_center_all <- data_combined  %>% word_frequency_by_nb(., "combined_community_center", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+
+worship_place_all <- data_combined %>% word_frequency_by_nb(., "combined_worship_place", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+doctor_all <- data_combined %>% word_frequency_by_nb(., "combined_doctor", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+hardware_store_all <- data_combined %>% word_frequency_by_nb(., "combined_hardware_store", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+dialysis_all <- data_combined %>% word_frequency_by_nb(., "typical_dialysis_center_selected", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+pharmacy_all <- data_combined %>% word_frequency_by_nb(., "combined_pharmacy", "neighborhood") %>% pivot_longer(cols = -c(column_name, words), names_to = "neighborhood", values_to = "frequency")
+
+
+##combine all the frequency tables into one
+all_frequency_counts_all <- rbind(bank_all, grocery_all, convenience_all, gas_all, food_bank_all, school_all, commmunity_center_all, worship_place_all, doctor_all, hardware_store_all, dialysis_all,pharmacy_all)%>% filter(frequency> 0)
+
+all_frequency_counts_all_new <- all_frequency_counts_all %>% left_join(new_freq_bluesky_join, by = c("words" = "words","neighborhood" = "neighborhood"))
+
+
+all_frequency_counts_all_new <- all_frequency_counts_all_new %>% mutate(all_new_name = ifelse(is.na(`New Name`), words, `New Name`)) %>% filter(all_new_name != "N/A" & all_new_name != "Other (Please explain):" & all_new_name != "Other (Please Explain):" & all_new_name != "Cheaper" & all_new_name != " " &all_new_name != "") #%>% filter_all(all_vars(!str_detect(., "^\\s*$")))
+
+
+
+
+###pivot into a wide table
+
+all_frequency_counts_all_wider <- all_frequency_counts_all_new %>%
+  group_by(all_new_name, column_name, neighborhood) %>%
+  summarise(total = sum(frequency)) %>%
+  tidyr::pivot_wider(names_from = neighborhood, values_from = total,   values_fill = 0) ## sort by the column name
+
+
+all_frequency_counts_all_wider$total_count = rowSums(all_frequency_counts_all_wider[3:8]) 
+
+
+### ascend in the column name and then descend in  total count
+
+
+all_frequency_counts_all_wider <- 
+all_frequency_counts_all_wider %>% arrange( column_name, desc(total_count))
+
+# write.csv(all_frequency_counts_all_new, "D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB_Leah_Cleaned_11_11_all.csv")
+
+write.csv(all_frequency_counts_all_wider, "D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB_12_07.csv")
+
+
+
+```
+
+
+```{r remake the frequency table 11.11}
+library(tidyverse)
+## load package to read excel
+library(readxl)
+
+## load the data
+new_freq_bluesky <- read_excel("D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB_Siman_Cleaned_11_13.xlsx")
+new_freq_bluesky <- new_freq_bluesky %>% mutate(all_new_name = ifelse(is.na(`New Name`), words, `New Name`))
+
+## select column  neighborhood,all_new_name and frequency and then pivot to a wider table with neighborhood as column
+
+new_freq_bluesky_wide <-  all_frequency_counts %>% left_join(new_freq_bluesky, by = c("words" = "words","neighborhood" = "neighborhood", "column_name" = "column_name")) %>%  
+  filter_all(all_vars(!str_detect(., "^\\s*$"))) %>% 
+  group_by(all_new_name, column_name, neighborhood) %>%
+  summarise(total = sum(frequency)) %>%
+  tidyr::pivot_wider(names_from = neighborhood, values_from = total, 
+                     values_fill = 0) ## sort by the column name
+new_freq_bluesky_wide <- new_freq_bluesky_wide[order(new_freq_bluesky_wide$column_name),] ##remove 'N/A' and 'Oth
+new_freq_bluesky_wide <- new_freq_bluesky_wide %>% filter(all_new_name != "N/A" & all_new_name != "Other (Please explain):" & all_new_name != "Other (Please Explain):" & all_new_name != "Cheaper" & all_new_name != " " &all_new_name != "") #%>%
+
+###left join all_frequency_counts with the new_freq_bluesky to get the all_new_name but disregard other columns
+all_frequency_counts_new <- all_frequency_counts %>% left_join(new_freq_bluesky %>% select(c("words","all_new_name","neighborhood")), by = c("words" = "words","neighborhood" = "neighborhood"))
+
+all_frequency_counts_new <- all_frequency_counts_new %>% filter(all_new_name != "N/A" & all_new_name != "Other (Please explain):" & all_new_name != "Other (Please Explain):" & all_new_name != "Cheaper" & all_new_name != " " & all_new_name != "missing") #%>% filter_all(all_vars(!str_detect(., "^\\s*$")))
+##order by column_name and then words
+all_frequency_counts_new <-  
+  all_frequency_counts_new[order(all_frequency_counts_new$column_name, all_frequency_counts_new$words),] 
+
+
+
+write.csv(new_freq_bluesky_wide, "D:/01PHD/000NREL_SCORE/04analysis/data/output/bluesky_frequency_all_NB_Leah_Cleaned_11_11_wide.csv")
+
+
+##########
+```

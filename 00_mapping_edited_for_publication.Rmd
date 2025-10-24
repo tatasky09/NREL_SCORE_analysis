@@ -1,0 +1,589 @@
+---
+title: "00Anonymize_map"
+author: "SimanNing"
+date: "`r Sys.Date()`"
+output: html_document
+---
+## Do not remove the excel file --- fixed the address in this
+
+```{r setup, include=FALSE}
+#install.packages(c("readxl", "sf", "ggplot2", "tigris"))
+
+# Load necessary libraries
+library(readxl)  # for reading Excel files
+library(sf)      # for spatial data manipulation
+library(ggplot2) # for plotting
+library(tigris)  # for census boundary data
+library(tidycensus)
+library(tidyverse)
+library(ggspatial)
+library(ggmap)
+# 1. Read Excel file
+# Replace 'your_excel_file.xlsx' with the path to your Excel file, and 'Sheet1' with your sheet name
+data <- read_excel("F:/01PHD/000NREL_SCORE/04analysis/data/Master_Response_Summary_2024_11_10.xlsx",sheet=1, col_names = FALSE)
+
+# Set the second row as column names
+colnames(data) <- data[3, ]  # Third row becomes column names
+question <- data[2, ]
+# Remove the second row from the data
+colnames(data) <- tolower(colnames(data))
+df1<- data[-c(1,2,3), ] ##removing 1 will result in not knowing which Q will respond to 
+
+```
+
+Try to geocode based on address. Because the geocoding only takes into places that without # or apt or suit,those will need manual entry. I also manually enter the last few ones from google.
+
+```{r}
+library(tidygeocoder)
+library(dplyr)
+
+# #######don't run this 
+# addresses <- df1[,c('response_id','address')] 
+# addresses$address <- gsub(", (?i)(unit|apt) [a-zA-Z0-9]+.*$", "", addresses$address)
+# 
+# addresses <-addresses%>% mutate(address_context = paste(df1$address, " Seattle, WA"))
+# 
+# # Geocode the addresses using Nominatim (OpenStreetMap API)
+# geocoded_data1 <- addresses %>%
+#   geocode(address = address, method = 'osm', lat = latitude, long = longitude)
+# geocoded_data2 <- geocoded_data1[,c(1,4,5)]
+
+##### write.csv(geocoded_data1,'F:/01PHD/000NREL_SCORE/04analysis/data/clean_address.csv')
+```
+
+
+```{r add back real geocoded address}
+###load the cleaned address and coordinates
+geocoded_data3 <- read.csv('F:/01PHD/000NREL_SCORE/04analysis/data/clean_address4.csv')[,c(2,5,6)]
+
+geocoded_data3$latitude <- as.numeric(geocoded_data3$latitude)
+geocoded_data3$longitude <- as.numeric(geocoded_data3$longitude)
+df1$longitude <- NULL
+df1$latitude <- NULL
+df2 <- left_join(df1, geocoded_data3)
+# Assume the data has columns 'lat' and 'lon' for latitude and longitude
+# Convert the lat and lon into spatial points
+df_sf <- st_as_sf(df2, coords = c("longitude", "latitude"), crs = 4326)  # WGS84 coordinate system 2926
+
+
+df2[! df2$response_id  %in% geocoded_data3$response_id, 'response_id']##check if there is any missing data
+```
+
+
+```{r}
+# 2. Get Census Block Group Boundaries
+# Replace 'STATE' and 'COUNTY' with the correct FIPS codes for the state and county you're working with
+library(tigris)
+census_boundaries <- block_groups(state = "WA", county = "King", class = "sf")
+
+# Transform the coordinate system of the census boundaries to match the Excel data
+census_boundaries_sf <- st_transform(census_boundaries, crs = st_crs(df_sf))
+
+###get census tract from tigris
+library(tigris)
+census_trt <- tracts(state = "WA", county = "King", class = "sf", year = 2020)
+
+# Transform the coordinate system of the census boundaries to match the Excel data
+census_trt_sf <- st_transform(census_trt, crs = st_crs(df_sf))
+
+Block <- blocks('WA', county = 'King' , year = NULL)
+
+NB <- st_read('F:/01PHD/000NREL_SCORE/04analysis/data/Neighborhood_Map_Atlas_Neighborhoods/Neighborhood_Map_Atlas_Neighborhoods.shp')
+
+
+NB_selected <- NB[NB$S_HOOD %in% c("Rainier Beach", "Highland Park", "Southwest", "West Seattle", "Northwest", "Downtown"), ]
+
+```
+
+```{r make map}
+
+# Specify the path to the directory containing the GIS files
+gis_path <- "F:/01PHD/000NREL_SCORE/04analysis/Mapping/"
+
+
+files <- list.files(path = gis_path, pattern = "\\.(shp|geojson)$", ignore.case = TRUE)
+
+# List all GIS files (shapefiles, GeoJSON, etc.) in the directory
+# files <- list.files(pattern = "\\.(shp|geojson)$")
+
+# Read all GIS files into a list of sf objects with the full path
+gis_layers <- lapply(files, function(file) {
+  st_read(file.path(gis_path, file))
+})
+
+# Subset the specific layers you want to plot
+selected_layers <- gis_layers[c(1,4, 5, 6, 8, 9, 10)]
+
+# Get the CRS of df_sf
+df_crs <- st_crs(df_sf)
+
+# Transform all selected layers to the same CRS as df_sf
+selected_layers_transformed <- lapply(selected_layers, function(layer) {
+  st_transform(layer, crs = df_crs)
+})
+
+# Combine transformed layers into a single sf object
+combined_layers <- do.call(rbind, selected_layers_transformed)
+### merge layers into one and create 1 mile buffer
+combined_layers_buffer_1mi <- st_union(combined_layers) %>% 
+  # st_make_valid() %>% 
+  st_buffer(dist = 1620) # 1 mile buffer in meters
+
+
+
+##get points within 
+within_poly <- st_within(df_sf, combined_layers_buffer_1mi, sparse = FALSE)
+points_inside <- df_sf[apply(within_poly, 1, any), ]
+
+
+census_boundaries_sf <- st_transform(census_boundaries_sf, df_crs)
+## get the census block group within the combined_layers
+a<- st_within(census_boundaries_sf, combined_layers, sparse = FALSE)
+BG_sf_selected <- census_boundaries_sf[a, ]
+
+### select the blocks that are intersected with the combined_layers_buffer_1mi
+Block <- st_transform(Block, df_crs)
+a<- st_within(Block, combined_layers_buffer_1mi, sparse = FALSE)
+Block_selected <- Block[a, ]
+
+#### select the right tracts within the combined_layers
+census_trt_sf <- st_transform(census_trt_sf, df_crs)
+a<- st_within(census_trt_sf, combined_layers_buffer_1mi, sparse = FALSE)
+census_trt_sf_selected1 <- census_trt_sf[census_trt_sf$NAME %in% c("111.01", "112" ,   "113",    "117",    "110.01" ,"109"  ,  "118.01", "119.01", "119.02", "110.02", "264"   , "118.02", "104.01", "104.02", "260.01","114.01", "114.02","108"), ] #,"111.01","104.02" "264" ,  , "103.01"
+census_trt_sf_selected1$NAME
+save(combined_layers, file = "F:/01PHD/000NREL_SCORE/04analysis/data/combined_layers.RData")
+# Plot the combined GIS layers and add df_sf as points
+ggplot() +
+  geom_sf(data = combined_layers_buffer_1mi, color =  "NA" , fill = "lightblue",alpha= 0.2) +
+  geom_sf(data = census_trt_sf_selected1, color = "gray", fill = NA,lwd = 0.8 )
+
+```
+
+```{r map the actual location}
+combined_layers <- combined_layers %>% distinct()
+site_map <-ggplot() +
+  geom_sf(data = combined_layers_buffer_1mi, color =NA, fill = "#63B8FF",alpha= 0.2 ) +
+  # geom_sf(data = Block_selected, color = "gray", fill = NA  ) + ### only draw outline, no fill, make line bold
+  geom_sf(data = census_trt_sf_selected1, color = "gray", fill = NA,lwd = 0.8 ) + #
+  #geom_sf(data = BG_sf_selected, color = "gray", fill = NA,lwd = 1 ) +
+  geom_sf(data = combined_layers, color =  "#36648B" , fill = "#36648B",alpha= 0.6) +
+  geom_sf(data = points_inside, color = "#FFFF00", size = 2) +
+  annotation_scale(location = "bl", width_hint = 0.5, unit_category = "imperial") +
+  # Add a north arrow
+  annotation_north_arrow(location = "tr", which_north = "true", 
+                         style = north_arrow_fancy_orienteering) +
+  # Add labels to the polygons using the S_Hood variable
+  # geom_sf_text(data = combined_layers, aes(label = S_HOOD), size = 3, color = "black") +
+  # Use a minimal theme and remove longitude and latitude lines
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text = element_blank(), # Remove lat/long numbers
+        axis.title = element_blank()) # Remove a
+
+library(ggplot2)
+library(ggspatial)
+
+site_map
+ggsave(filename = "F:/01PHD/000NREL_SCORE/04analysis/data/output/site_map.jpg", plot = site_map, width = 8, height = 6, dpi = 300 )
+
+NB_selected2 <- NB[NB$L_HOOD %in% c("Beacon Hill" ,  "Rainier Valley"  ,  "Delridge" ,  "Seward Park","Greater Duwamish" ,   "West Seattle" ), ] #, "Downtown"
+###plot the NBs without points and with larger NB map
+site_map1 <-ggplot() +
+  coord_sf(
+    xlim = c(-123.2, -122.2),  # longitude range
+    ylim = c(47.4, 47.5),      # latitude range
+    expand = FALSE             # prevents automatic margin expansion
+  )+
+  # geom_sf(data = Block_selected, color = "gray", fill = NA  ) + ### only draw outline, no fill, make line bold
+  geom_sf(data = NB_selected2, color = "gray", fill = NA,lwd = 1 ) +
+  geom_sf(data = combined_layers, color =  "#36648B" , fill = "#36648B",alpha= 0.6) +
+  annotation_scale(location = "bl", width_hint = 0.5, unit_category = "imperial") +
+  # Add a north arrow
+  annotation_north_arrow(location = "tr", which_north = "true", 
+                         style = north_arrow_fancy_orienteering) +
+  # Add labels to the polygons using the S_Hood variable
+  geom_sf_text(data = combined_layers, aes(label = S_HOOD), size = 3, color = "white") +
+  # Use a minimal theme and remove longitude and latitude lines
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text = element_blank(), # Remove lat/long numbers
+        axis.title = element_blank()) # Remove a
+
+
+site_map1
+ggsave(filename = "F:/01PHD/000NREL_SCORE/04analysis/data/output/site_map1.jpg", plot = site_map1, width = 8, height = 6, dpi = 300 )
+
+```
+
+
+
+
+```{r interactive map}
+library(leaflet)
+tract <- st_read('F:/01PHD/000NREL_SCORE/04analysis/data/2020_Census_Tracts_Seattle_8661193084158732132/tract20_king_county.shp') %>% st_transform(., crs = 4326)
+census_trt_sf <- st_transform(census_trt, crs = st_crs(df_sf))
+NB <- st_transform(NB, crs = st_crs(df_sf))
+
+### select the tracts in census_trt_sf that is within 
+
+  # Create the leaflet map
+map1<- leaflet() %>%  
+  setView(lng = -122.296596537008, lat = 47.620005592186706, zoom = 11) %>%
+  addProviderTiles(providers$CartoDB.PositronNoLabels) %>%  # Add default OpenStreetMap tiles
+    #add polygons from the tract
+  addPolygons(data = NB , # tract
+              color = "#8B8682",  # Boundary color
+              weight = 2,      # Boundary line thickness
+              fillColor = "white",  # Fill color for polygons
+              fillOpacity = 0.4,
+              popup = ~L_HOOD) %>%  # Opacity of the polygon fill
+  #add polygons from the tract
+  addPolygons(data = combined_layers, 
+              color = "black",  # Boundary color
+              weight = 2,      # Boundary line thickness
+              fillColor = "#36648B",  # Fill color for polygons
+              fillOpacity = 0.6) #%>%  # Opacity of the polygon fill
+  # # Add points layer
+  # addCircleMarkers(data = df2 %>% filter(df2$response_id %in% points_inside$response_id),
+  #                  ~longitude, ~latitude,
+  #                  radius = 1,
+  #                  color = "red",
+  #                  fillOpacity = 0.7,
+  #                  popup = ~response_id)
+map1
+library(mapview)
+library(webshot)
+# Save the leaflet map to a PNG image
+mapshot(map1, file = "F:/01PHD/000NREL_SCORE/04analysis/data/output/map_output_seattle.png", remove_controls = c("zoomControl", "layersControl", "homeButton", "scaleBar",
+    "drawToolbar", "easyButton"), vwidth = 800, vheight = 700)
+
+```
+
+
+```{r}
+library(leaflet)
+load("F:/01PHD/000NREL_SCORE/04analysis/data/NREL_points2.RData")
+centroids <- st_centroid(combined_layers)
+ 
+map2 <-leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
+  addProviderTiles(providers$CartoDB.PositronNoLabels,
+    options = providerTileOptions(attribution = NULL)
+) %>%  # Add default OpenStreetMap tiles
+  setView(lng = -122.3, lat = 47.53, zoom = 13) %>%  # Set initial view
+  # Add boundary layer
+  addPolygons(data = NB, 
+              color = "gray",  # Boundary color
+              weight = 0.9,      # Boundary line thickness
+              fillColor = "white",  # Fill color for polygons
+              # fillOpacity = 0.3, popup = ~NAME
+              ) %>%  # Opacity of the polygon fill
+  addPolygons(data = combined_layers , 
+              color = "black",  # Boundary color
+              weight = 0.2,      # Boundary line thickness
+              fillColor = "#36648B",  # Fill color for polygons
+              fillOpacity = 0.7
+              ) %>%  # Opacity of the polygon fill
+  # Add points layer
+  addLabelOnlyMarkers(
+    data = centroids,
+    label =  ~S_HOOD,  # replace with your actual label column
+    labelOptions = labelOptions(
+      noHide = TRUE,
+      direction = "center",
+      textOnly = TRUE,
+      style = list(
+        "color" = "black",
+        "font-size" = "13px",
+        "font-weight" = "bold" #,
+        # "background" = "rgba(255,255,255,0.7)",
+        # "padding" = "2px"
+      )
+    )
+  ) %>% 
+  addScaleBar(position = "bottomright", options = scaleBarOptions(metric = FALSE, imperial = TRUE)) %>% 
+  addControl("<b>N</b> ↑", position = "topright")
+
+
+
+              
+              
+# webshot::install_phantomjs()
+map2
+
+
+map3 <-leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
+  addProviderTiles(providers$CartoDB.PositronNoLabels,
+    options = providerTileOptions(attribution = NULL)
+) %>%  # Add default OpenStreetMap tiles
+  setView(lng = -122.3, lat = 47.53, zoom = 12) %>%  # Set initial view
+  addPolygons(data =  combined_layers_buffer_1mi,
+              # color = "#63B8FF",  # Boundary color
+              weight = 0,      # Boundary line thickness
+              fillColor = "#63B8FF",  # Fill color for polygons
+              fillOpacity = 0.3) %>%  # Opacity of the polygon fill
+  # Add boundary layer
+  addPolygons(data = NB, 
+              color = "gray",  # Boundary color
+              weight = 0.9,      # Boundary line thickness
+              fillColor = "white",  # Fill color for polygons
+              # fillOpacity = 0.3, popup = ~NAME
+              ) %>%  # Opacity of the polygon fill
+  addPolygons(data = combined_layers , 
+              color = "black",  # Boundary color
+              weight = 0.2,      # Boundary line thickness
+              fillColor = "#36648B",  # Fill color for polygons
+              fillOpacity = 0.7
+              ) %>%  # Opacity of the polygon fill
+# Add points layer
+  addCircleMarkers(data = NREL_points2,
+                   ~LON, ~LAT,
+                   radius = 2,
+                   color = "#FFFF00",
+                   # fill = TRUE,
+                   # fillColor = "yellow",
+                   fillOpacity = 1,
+                   popup = ~response_id)%>% 
+  addScaleBar(position = "bottomright", options = scaleBarOptions(metric = FALSE, imperial = TRUE)) %>% 
+  addControl("<b>N</b> ↑", position = "topright")
+
+map3
+
+
+
+library(mapview)
+library(webshot)
+# Save the leaflet map to a PNG image
+mapshot(map2, file = "F:/01PHD/000NREL_SCORE/04analysis/data/output/map_output_large_NB_name.png", remove_controls = c("zoomControl", "layersControl", "homeButton", "scaleBar",
+    "drawToolbar", "easyButton"), vwidth = 1000, vheight = 700)
+
+mapshot(map3, file = "F:/01PHD/000NREL_SCORE/04analysis/data/output/map_output_large_points.png", remove_controls = c("zoomControl", "layersControl", "homeButton", "scaleBar",
+    "drawToolbar", "easyButton"), vwidth = 1000, vheight = 700)
+```
+
+##### create a series of points that are not within the block group boundary.
+```{r cars}
+    
+# Check if points are within polygons
+within_poly <- st_within(df_sf, combined_layers, sparse = FALSE)
+
+# Identify points that are NOT within polygons
+points_outside <- df_sf[!apply(within_poly, 1, any), ]
+
+# View points outside the polygons
+print(points_outside)
+points_outside1 <- points_outside %>% st_drop_geometry()
+write.csv(points_outside %>% st_drop_geometry(),'F:/01PHD/000NREL_SCORE/04analysis/data/points_outside.csv')
+
+### save the data to rdata-- sometimes saving to csv creates problem-- it is easier to do it in RData if it is for my own internal use.
+save(df2, file = "F:/01PHD/000NREL_SCORE/04analysis/data/useful_set.RData")
+
+print(df2)
+```
+
+## read the file
+
+
+```{r pressure, echo=FALSE}
+
+Block<- Block %>% mutate(LAT = as.numeric(as.character(Block$INTPTLAT20)),LON = as.numeric(as.character(Block$INTPTLON20)))
+# Check if points are within polygons
+block_st <- st_transform(Block, df_crs)
+
+blocks_within_or_intersect <- block_st %>%
+  filter(lengths(st_intersects(., combined_layers)) > 0)
+
+# View the result
+print(blocks_within_or_intersect)
+
+
+# Define a bounding box for South Seattle
+south_seattle_bbox <- st_as_sfc(st_bbox(c(
+  xmin = -122.39,  # Approximate western boundary
+  xmax = -122.21,  # Approximate eastern boundary
+  ymin = 47.50,    # Approximate southern boundary
+  ymax = 47.59     # Approximate northern boundary
+), crs = st_crs(block_st)))
+
+
+
+###west 47.51695702568382, -122.39371301452846
+##lake ridge park- southeast corner 47.5007916508211, -122.24482678268956
+# Filter blocks to only those within the South Seattle bounding box
+south_seattle_blocks <- block_st %>%
+  filter(lengths(st_intersects(., south_seattle_bbox)) > 0)
+south_seattle_blocks1 <- south_seattle_blocks[south_seattle_blocks$POP20>0,]
+```
+
+###Not really necessary but good to know that you can plot basemap into the graph
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+
+points <- df_sf
+polygons <- south_seattle_blocks1
+# Find polygons that points fall within
+points_within <- st_join(points, polygons, join = st_within) #%>% st_drop_geometry()
+
+
+
+
+# Identify points that are not within any polygon
+points_not_within <- points_within [is.na(points_within$LAT),] #%>% st_drop_geometry()# Assume `polygon_id` exists in polygons
+points_not_within1 <- points_within [is.na(points_within$LAT), ! colnames(points_within) %in% colnames(polygons)] #%>% st_drop_geometry()# Assume `polygon_id` exists in polygons
+
+
+# For points not within any polygon, find the nearest polygon
+nrow(points_not_within) 
+# Find the nearest polygon for each point
+nearest_polygons <- st_nearest_feature(points_not_within , polygons)
+print(polygons[nearest_polygons, ])
+
+
+# Get the coordinates (centroid or representative point) of the nearest polygons
+points_not_within_sf <- as.data.frame(cbind(points_not_within1%>% st_drop_geometry(), polygons[nearest_polygons, ]%>% st_drop_geometry()
+))%>% st_drop_geometry() #%>% select(1:304,)
+
+length(points_within) ##323
+length(points_not_within_sf) #343
+points_within1 <- rbind(points_within [!is.na(points_within$LAT), ] %>% st_drop_geometry() ,points_not_within_sf)
+# Combine the results back with the original points
+
+geocoded_data_hash <- points_within1[,c("response_id","GEOID20", "LON", "LAT")] %>% st_drop_geometry()
+
+write.csv(geocoded_data_hash , "F:/01PHD/000NREL_SCORE/04analysis/data/output/NREL_points.csv", fileEncoding = "UTF-8")
+
+
+library(dplyr)
+new_points <- read_xlsx("F:/01PHD/000NREL_SCORE/04analysis/data/output/NREL_points_hashed.xlsx")
+new_NREL_survey <- left_join(df2,new_points, by = "response_id") 
+write.csv(new_NREL_survey, "F:/01PHD/000NREL_SCORE/04analysis/data/output/hash-NREL-points-survey//NREL_survey.csv", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+
+
+## find the
+drop_cols <-c("response_type",	"ip_address",
+"address","STATEFP20" ,  "COUNTYFP20","TRACTCE20" ,                                
+"BLOCKCE20" ,    "NAME20" ,      "MTFCC20",     
+ "UR20" ,        "UACE20"  , "UATYPE20",     "FUNCSTAT20"  ,
+"ALAND20" ,     "AWATER20" ,   "HOUSING20" ,   "POP20" ,"INTPTLAT20","INTPTLON20" )
+
+points_within <- points_within[,! colnames(points_within)  %in% drop_cols]
+NREL_points <- st_as_sf(points_within, coords = c("LON", "LAT"), crs = 4326)
+
+
+
+
+within_points_block <- st_join(df_sf, south_seattle_blocks, join = st_within) %>% st_drop_geometry()
+within_points_block1 <- within_points_block[,! colnames(within_points_block)  %in% drop_cols]
+write.csv(points_outside %>% st_drop_geometry(),'F:/01PHD/000NREL_SCORE/04analysis/data/points_outside.csv')
+
+# colnames(within_points_block)
+```
+
+To generate hash, the package digest didn't work well due to compatibility issue. So I used the website to generate hash
+https://passwordsgenerator.net/sha256-hash-generator/#google_vignette
+
+### draw the map for NREL
+
+```{r NREL maps for points}
+# Improved ggplot code 4.23 new map
+a <-st_within(NREL_points,combined_layers_buffer_1mi, sparse = TRUE)
+NREL_points1 <- NREL_points[apply(a, 1, any), ]
+## get LON and LAT from NREL_points1 sf 
+NREL_points2 <- NREL_points1 %>% st_transform(crs = st_crs(df_sf)) %>% st_drop_geometry()
+save(NREL_points2, file = "F:/01PHD/000NREL_SCORE/04analysis/data/NREL_points2.RData")
+
+NREL_map <- ggplot() +
+  geom_sf(data = combined_layers_buffer_1mi, color =  "NA" , fill = "lightblue",alpha= 0.2) +
+  geom_sf(data = census_trt_sf_selected1, color = "gray", fill = NA,lwd = 0.8 ) +
+  geom_sf(data = BG_sf_selected, color = "gray", fill = NA,lwd = 1 ) +
+  geom_sf(data = combined_layers, aes(fill = OBJECTID) , fill = "blue",alpha= 0.2) +
+  geom_sf(data = NREL_points1, color = "blue", size = 1) +
+  # Add a scale bar in miles
+  annotation_scale(location = "bl", width_hint = 0.5, unit_category = "imperial") +
+  # Add a north arrow
+  annotation_north_arrow(location = "tr", which_north = "true", 
+                         style = north_arrow_fancy_orienteering) +
+  # Add labels to the polygons using the S_Hood variable
+  geom_sf_text(data = combined_layers, aes(label = S_HOOD), size = 3, color = "black") +
+  # Use a minimal theme and remove longitude and latitude lines
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text = element_blank(), # Remove lat/long numbers
+        axis.title = element_blank()) # Remove a
+NREL_map
+
+
+ggplot() +
+  # geom_sf(data = Block_selected, color = "gray", fill = NA  ) + ### only draw outline, no fill, make line bold
+  geom_sf(data = census_trt_sf_selected1, color = "gray", fill = NA,lwd = 0.8 ) +
+  geom_sf(data = BG_sf_selected, color = "gray", fill = NA,lwd = 1 ) +
+  geom_sf(data = combined_layers,  fill = "blue",alpha= 0.1) +
+  geom_sf(data = points_inside, color = "red", size = 2) +
+  annotation_scale(location = "bl", width_hint = 0.5, unit_category = "imperial") +
+  # Add a north arrow
+  annotation_north_arrow(location = "tr", which_north = "true", 
+                         style = north_arrow_fancy_orienteering) +
+  # Add labels to the polygons using the S_Hood variable
+  geom_sf_text(data = combined_layers, aes(label = S_HOOD), size = 3, color = "black") +
+  # Use a minimal theme and remove longitude and latitude lines
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text = element_blank(), # Remove lat/long numbers
+        axis.title = element_blank()) # Remove a
+
+
+ggsave(filename = "F:/01PHD/000NREL_SCORE/04analysis/data/output/NREL_map.jpg", plot = NREL_map, width = 8, height = 6, dpi = 300 )
+
+
+```
+
+####map out all infrastructure on map
+```{r}
+# Load the CSV file with coordinates
+coordinates <- read.csv("F:/01PHD/000NREL_SCORE/04analysis/data/score_pois_w_neighborhoods.csv")
+
+# Define the bounding box (southwest and northeast corners)
+bounds <- list(
+  lng1 = -122.39, lat1 = 47.50,  # Southwest corner (lon, lat)
+  lng2 = -122.21, lat2 = 47.59   # Northeast corner (lon, lat)
+)
+
+# Ensure your data has latitude and longitude columns
+head(coordinates)
+
+library(ggplot2)
+library(osmdata)
+library(leaflet)
+
+map<-leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap tiles
+  addScaleBar(position = "bottomleft", options = scaleBarOptions(maxWidth = 100)) %>%  # Add scale bar
+
+  setView(lng = -122.3, lat = 47.55, zoom = 12) %>%  # Set initial view
+  setMaxBounds(lng1 = bounds$lng1, lat1 = bounds$lat1, lng2 = bounds$lng2, lat2 = bounds$lat2) %>% 
+
+ # Add points layer
+  addCircleMarkers(data = coordinates,
+                   ~Longitude, ~Latitude,
+                   radius = 1,
+                   color = "red",
+                   fillOpacity = 0.7,
+                   popup = ~ Name)
+# webshot::install_phantomjs()
+
+library(mapview)
+library(webshot)
+# Save the leaflet map to a PNG image
+mapshot(map, file = "F:/01PHD/000NREL_SCORE/04analysis/data/output/map_output_large.png", remove_controls = c("zoomControl", "layersControl", "homeButton", "scaleBar",
+    "drawToolbar", "easyButton"), vwidth = 19800, vheight = 7200)
+
+```

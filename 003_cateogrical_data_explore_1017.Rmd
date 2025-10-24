@@ -1,0 +1,386 @@
+---
+title: "003_categorical_data_analysis"
+author: "SimanNing"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+load("D:/01PHD/000NREL_SCORE/04analysis/data/combined_data_choice_1021.Rdata")
+```
+
+
+```{r pressure, echo=FALSE}
+# install.packages("networkD3")
+library(networkD3)
+
+```
+```{r}
+library(stringr)
+library(tidyverse)
+library(networkD3)
+library(dplyr)
+
+paste(names(data_combined),collapse = ",")
+####add a count column to destination of places
+data_combined <- data_combined %>%
+  mutate(count_relocation_destination = ifelse(is.na(relocation_location_selected), 
+                                               0, 
+                                               str_count(relocation_location_selected, ",") + 1))
+```
+
+
+
+```{r}
+# Blue Sky Use
+cols_demographic <- c("work_location", "combined_home_ownership", "household_size", "household_race_selected")
+
+all_cols<- c("combined_languages","age","neighborhood","zip_code","combined_gender","work_location","combined_home_ownership","combined_housing_type","household_size","household_race_selected","household_race_white","household_race_black","household_race_american_indian","household_race_asian","household_race_hawaiian","household_race_other","household_race_multi","hispanic_latino_count","under_18_count","under_5_count","single_parent_hh","over_65_count","hh_income","education_level","languages_other_text","english_proficiency_selected","english_proficiency_very_well","english_proficiency_well","english_proficiency_not_well","english_proficiency_not_at_all",##basic demographics
+             
+             "condition_worsened_by_outage","outage_impact_description","electric_device_dependent","electric_device_type","prescription_med","refrigerated_med","combined_primary_transport_mode","vehicle_count","combined_energy_sources","backup_energy_system","combined_backup_energy_system_type", ##conditions about outage
+             
+             "solar_benefit_rank_cost","solar_benefit_rank_reliability","solar_benefit_rank_pollution","solar_benefit_rank_jobs","solar_benefit_additional_info","seattle_city_light_bill","seattle_city_light_discounts","greenup_participant","shutoff_notice","avg_electric_bill","bill_affordability", ###solar energy related and electricity related
+             
+             "location_use_frequency_pharmacy","location_use_frequency_grocery_store","location_use_frequency_convenience_store","location_use_frequency_food_bank","location_use_frequency_school","location_use_frequency_gas_station","location_use_frequency_community_center","location_use_frequency_worship","location_use_frequency_bank","location_use_frequency_doctor","location_use_frequency_dialysis","location_use_frequency_hardware_store","location_use_frequency_trusted_hh","location_frequency_other_1","location_other_1_text","location_frequency_other_2","location_other_2_text","location_frequency_other_3","location_other_3_text", ###combined frequency
+             
+             "combined_pharmacy","combined_grocery_store","combined_convenience_store","combined_food_bank","combined_school","combined_gas_station","combined_community_center","combined_worship_place","combined_bank","combined_doctor","typical_dialysis_center_selected","combined_hardware_store","shelf_stable_food_days",#### combined location choice
+             
+            "bottled_water_days","prescription_med_days","refrigerated_med_days","emergency_savings","emergency_savings_amount_selected","emergency_savings_amount_text","power_outage_experience","outage_duration","outage_location",#outage concern
+            ######"outage_concern_description",
+            
+            "affordability_worry","affordability_worry_explanation","combined_activity_disruption_adaptation","combined_activity_disruption_health_impact","combined_disrupted_health_impact","health_impact_explanation", #########    ##"relocation_location_description"
+            "relocation_option","combined_relocation_location","combined_community_outage_concern","outage_need_adaptation_food","outage_need_adaptation_healthcare","outage_need_adaptation_food_cooling","outage_need_adaptation_cooking","outage_need_adaptation_med_cooling","outage_need_adaptation_healthcare_device","outage_need_adaptation_washing","outage_need_adaptation_comfort","outage_need_adaptation_lighting","outage_need_adaptation_info","outage_need_adaptation_comm","outage_need_adaptation_other",
+            #"outage_need_adaptation_other_text",
+            "combined_food_access_location","combined_healthcare_access_location","combined_food_cooling_access_location","combined_cooking_access_location","combined_med_cooling_access_location","combined_healthcare_device_access_location","combined_washing_access_location_location","combined_comfort_access_location","combined_lighting_access_location","combined_info_access_location","combined_comm_access_location","combined_other_task_location","combined_primary_reason_facility","same_facility_during_outage","closing_concerns","survey_source_selected","survey_source_other","select","latitude","longitude")
+unique(data_combined$same_facility_during_outage)
+
+cols_bluesky <-c(  "relocation_option","combined_relocation_location","location_use_frequency_pharmacy",
+                   "location_use_frequency_grocery_store","location_use_frequency_convenience_store","location_use_frequency_food_bank","location_use_frequency_school","location_use_frequency_gas_station","location_use_frequency_community_center","location_use_frequency_worship","location_use_frequency_bank","location_use_frequency_doctor","location_use_frequency_dialysis","location_use_frequency_hardware_store","location_use_frequency_trusted_hh")
+
+cols_blue_black_food <-c("location_use_frequency_grocery_store","relocation_option","same_facility_during_outage","combined_primary_reason_facility","count_relocation_destination" )
+cols_blue_black_pharmacy <-c("location_use_frequency_pharmacy","relocation_option","same_facility_during_outage","combined_primary_reason_facility" )
+cols_blue_black_food_bank <-c("location_use_frequency_food_bank","relocation_option","same_facility_during_outage","combined_primary_reason_facility" )
+
+cols_blue_black_bank <-c("location_use_frequency_bank","relocation_option","same_facility_during_outage","combined_primary_reason_facility" )
+
+cols_blue_black_community_center <-c("location_use_frequency_community_center","relocation_option","same_facility_during_outage","combined_primary_reason_facility" )
+#"combined_convenience_store","combined_food_bank","combined_grocery_store","combined_relocation_location"
+
+
+df2$primary_reason_facility_selected
+cols_blue_black_food_typical <-c("location_use_frequency_grocery_store","typical_grocery_store_1") #,"typical_convenience_store_1","typical_food_bank_1","relocation_option","typical_relocation_location"
+
+#,"location_use_frequency_pharmacy","combined_food_access_location","combined_food_cooling_access_location","combined_cooking_access_location"
+```
+
+For the sankey diagram, it won't work well if the categories are of same levels for different
+It also doesn't work well if multiple choices allowed in one place...-- think about using the original data
+
+
+
+
+
+###Sankey Diagram
+```{r sankey}
+library(networkD3)
+library(dplyr)
+
+# Define the function
+create_sankey <- function(data, cols) {
+  # Select the specified columns
+  df <- data[, colnames(data) %in% cols]
+    # Replace NAs with 'NA'
+  df[is.na(df)] <- "missing"
+  df <- df %>%
+  mutate(across(where(is.numeric), as.factor))
+
+  # Get unique categories
+  categories <- unique(unlist(df))
+  nodes <- data.frame(name = categories)
+  
+  # Initialize an empty data frame for links
+  links <- data.frame()
+  
+  # Populate the links
+  for (i in 1:(ncol(df) - 1)) {
+    source_column <- df[, i]
+    target_column <- df[, i + 1]
+    
+    for (j in 1:nrow(df)) {
+      source <- which(nodes$name == source_column[j])
+      target <- which(nodes$name == target_column[j])
+      
+      # Check if source and target are found
+      if(length(source) > 0 & length(target) > 0) {
+        links <- rbind(links, data.frame(source = source - 1, target = target - 1, value = 1))
+      }
+    }
+  }
+  
+  # Aggregate the values for each link
+  links <- aggregate(value ~ source + target, data = links, FUN = sum)
+  
+  # Create the Sankey diagram
+  sankeyNetwork(Links = links, Nodes = nodes, Source = "source", Target = "target", Value = "value", NodeID = "name", units = "people")
+  
+}
+cols_bluesky
+# Example usage
+create_sankey(data_combined, cols_bluesky )
+create_sankey(data_combined, cols_blue_black_food )
+create_sankey(data_combined, cols_blue_black_pharmacy)
+create_sankey(data_combined, cols_blue_black_food_bank)
+create_sankey(data_combined, cols_blue_black_bank)
+create_sankey(data_combined, cols_blue_black_community_center)
+
+
+create_sankey(data_combined, c("household_race_selected",	"relocation_option"))	#0.410383
+create_sankey(data_combined, c("hh_income",	"relocation_option"))
+create_sankey(data_combined, c("education_level","relocation_option"))	#0.303596
+create_sankey(data_combined, c("combined_primary_transport_mode",	"relocation_option"))
+create_sankey(data_combined, c("combined_energy_sources",	"relocation_option"))
+create_sankey(data_combined, c("location_use_frequency_community_center",	"relocation_option"))
+create_sankey(data_combined, c("location_use_frequency_bank",	"relocation_option"))
+
+
+
+```
+Cramer's V already tell some stories...
+```{r chi square test}
+demographic <- c("combined_languages","age","neighborhood","combined_gender","work_location","combined_home_ownership","combined_housing_type","household_size","household_race_selected","hh_income","education_level","relocation_option")
+
+demographic_full <- c("combined_languages","age","neighborhood","zip_code","combined_gender","work_location","combined_home_ownership","combined_housing_type","household_size","household_race_selected","household_race_white","household_race_black","household_race_american_indian","household_race_asian","household_race_hawaiian","household_race_other","household_race_multi","hispanic_latino_count","under_18_count","under_5_count","single_parent_hh","over_65_count","hh_income","education_level","languages_other_text","english_proficiency_selected","english_proficiency_very_well","english_proficiency_well","english_proficiency_not_well","english_proficiency_not_at_all","relocation_option")
+# Load necessary package
+library(dplyr)
+df <- data_combined[,colnames(data_combined) %in% demographic_full] #%>% drop_na(relocation_option)
+
+# Loop through all other variables and perform Chi-square test
+results <- lapply(names(df)[names(df) != "relocation_option"], function(var) {
+  test <- chisq.test(table(df[["relocation_option"]], df[[var]]))
+  return(list(variable = var, p_value = test$p.value, result = test))
+})
+
+# Display the results
+for (res in results) {
+  cat("Variable:", res$variable, "\n")
+  cat("P-value:", res$p_value, "\n")
+  print(res$result)
+  cat("\n")
+}
+
+
+
+```
+
+```{r first regression}
+library(glm)
+# Install necessary packages
+# install.packages("nnet")  # For multinom function
+# install.packages("mlogit")  # For advanced multinomial logistic models
+
+# Load the libraries
+library(nnet)
+# Multinomial Logistic Regression
+model <- multinom(relocation_option ~ household_race_selected+
+hh_income+
+education_level+
+combined_primary_transport_mode+
+combined_energy_sources+
+location_use_frequency_community_center+
+location_use_frequency_bank
+, data = data_combined)
+data_combined$combined_energy_sources
+# Summary of the model
+summary(model)
+# Get coefficients
+coef(model)
+
+# Calculate Odds Ratios
+exp(coef(model))
+
+library(stargazer)
+
+# Stargazer table for multinomial logistic regression
+stargazer(model, type = "html", title = "Multinomial Logistic Regression Results", 
+          align = TRUE, no.space = TRUE)
+
+
+```
+
+
+
+```{r}
+load("D:/01PHD/000NREL_SCORE/04analysis/data/useful_set.RData") ##will load df2 exactly same
+paste(names(df2),collapse = ",")
+cols_test <-c("location_use_frequency_pharmacy","typical_pharmacy_selected","typical_pharmacy_other","typical_pharmacy_1") #,"typical_pharmacy_2","typical_pharmacy_3","typical_pharmacy_4","typical_pharmacy_5","typical_pharmacy_6","typical_pharmacy_7","typical_pharmacy_8","typical_pharmacy_9","typical_pharmacy_10"
+
+create_sankey(df2, cols_test)
+unique(df2$location_use_frequency_grocery_store)
+
+```
+
+"start_date","end_date","response_type","ip_address","progress","duration_sec","finished","recorded_date","response_id","recipient_last_name","recipient_first_name","recipient_email","external_data_reference","dist_channel","user_language","consent_to_participate","age","neighborhood","address","city","state","zip_code","gender","gender_other","work_location","home_ownership","home_ownership_other","housing_type","housing_type_other","household_size",
+
+"household_race_selected","household_race_white","household_race_black","household_race_american_indian","household_race_asian","household_race_hawaiian","household_race_other","household_race_multi","hispanic_latino_count","under_18_count","under_5_count","single_parent_hh","over_65_count",
+"hh_income","education_level",
+
+"languages_other","languages_other_text","english_proficiency_selected","english_proficiency_very_well","english_proficiency_well","english_proficiency_not_well","english_proficiency_not_at_all",
+
+"condition_worsened_by_outage","outage_impact_description","electric_device_dependent","electric_device_type","prescription_med","refrigerated_med","primary_transport_mode_selected","primary_transport_mode_other","vehicle_count","energy_sources_selected","energy_sources_other","backup_energy_system","backup_energy_system_type_selected","backup_energy_system_type_other","solar_benefit_rank_cost","solar_benefit_rank_reliability","solar_benefit_rank_pollution","solar_benefit_rank_jobs","solar_benefit_additional_info","seattle_city_light_bill","seattle_city_light_discounts","greenup_participant","shutoff_notice","avg_electric_bill","bill_affordability",
+
+"location_use_frequency_pharmacy","typical_pharmacy_selected","typical_pharmacy_other","typical_pharmacy_1","typical_pharmacy_2","typical_pharmacy_3","typical_pharmacy_4","typical_pharmacy_5","typical_pharmacy_6","typical_pharmacy_7","typical_pharmacy_8","typical_pharmacy_9","typical_pharmacy_10",
+
+"location_use_frequency_grocery_store","typical_grocery_store_selected","typical_grocery_store_other","typical_grocery_store_1","typical_grocery_store_2","typical_grocery_store_3","typical_grocery_store_4","typical_grocery_store_5","typical_grocery_store_6","typical_grocery_store_7","typical_grocery_store_8","typical_grocery_store_9","typical_grocery_store_10",
+
+"location_use_frequency_convenience_store","typical_convenience_store_selected","typical_convenience_store_other","typical_convenience_store_1","typical_convenience_store_2","typical_convenience_store_3","typical_convenience_store_4","typical_convenience_store_5","typical_convenience_store_6","typical_convenience_store_7","typical_convenience_store_8","typical_convenience_store_9","typical_convenience_store_10",
+
+"location_use_frequency_food_bank","typical_food_bank_selected","typical_food_bank_other","typical_food_bank_1","typical_food_bank_2","typical_food_bank_3","typical_food_bank_4","typical_food_bank_5","typical_food_bank_6","typical_food_bank_7","typical_food_bank_8","typical_food_bank_9","typical_food_bank_10",
+
+"location_use_frequency_school",
+"location_use_frequency_gas_station",
+"location_use_frequency_community_center",
+"location_use_frequency_worship",
+"location_use_frequency_bank",
+"location_use_frequency_doctor",
+"location_use_frequency_dialysis",
+"location_use_frequency_hardware_store",
+"location_use_frequency_trusted_hh",
+"location_frequency_other_1","location_other_1_text",
+"location_frequency_other_2","location_other_2_text",
+"location_frequency_other_3","location_other_3_text",
+
+
+"typical_school_selected","typical_school_other","typical_school_1","typical_school_2","typical_school_3","typical_school_4","typical_school_5","typical_school_6","typical_school_7","typical_school_8","typical_school_9","typical_school_10","typical_gas_station_selected","typical_gas_station_other","typical_gas_station_1","typical_gas_station_2","typical_gas_station_3","typical_gas_station_4","typical_gas_station_5","typical_gas_station_6","typical_gas_station_7","typical_gas_station_8","typical_gas_station_9","typical_gas_station_10","typical_community_center_selected","typical_community_center_other","typical_community_center_1","typical_community_center_2","typical_community_center_3","typical_community_center_4","typical_community_center_5","typical_community_center_6","typical_community_center_7","typical_community_center_8","typical_community_center_9","typical_community_center_10","typical_worship_place_selected","typical_worship_place_other","typical_worship_place_1","typical_worship_place_2","typical_worship_place_3","typical_worship_place_4","typical_worship_place_5","typical_worship_place_6","typical_worship_place_7","typical_worship_place_8","typical_worship_place_9","typical_worship_place_10","typical_bank_selected","typical_bank_other","typical_bank_1","typical_bank_2","typical_bank_3","typical_bank_4","typical_bank_5","typical_bank_6","typical_bank_7","typical_bank_8","typical_bank_9","typical_bank_10","typical_doctor_selected","typical_doctor_other","typical_doctor_1","typical_doctor_2","typical_doctor_3","typical_doctor_4","typical_doctor_5","typical_doctor_6","typical_doctor_7","typical_doctor_8","typical_doctor_9","typical_doctor_10","typical_dialysis_center_selected","typical_hardware_store_selected","typical_hardware_store_other","typical_hardware_store_1","typical_hardware_store_2","typical_hardware_store_3","typical_hardware_store_4","typical_hardware_store_5","typical_hardware_store_6","typical_hardware_store_7","typical_hardware_store_8","typical_hardware_store_9","typical_hardware_store_10","typical_hardware_store_11","shelf_stable_food_days","bottled_water_days","prescription_med_days","refrigerated_med_days","emergency_savings","emergency_savings_amount_selected","emergency_savings_amount_text","power_outage_experience","outage_duration","outage_location","outage_concern_description","affordability_worry","affordability_worry_explanation","activity_disruption_adaptation_selected","activity_disruption_adaptation_other","activity_disruption_health_impact_selected","activity_disruption_health_impact_other","disrupted_health_impact_selected","disrupted_health_impact_other","health_impact_explanation","relocation_option","relocation_location_selected","relocation_location_other","relocation_location_description","community_outage_concern_selected","community_outage_concern_other","outage_need_adaptation_food","outage_need_adaptation_healthcare","outage_need_adaptation_food_cooling","outage_need_adaptation_cooking","outage_need_adaptation_med_cooling","outage_need_adaptation_healthcare_device","outage_need_adaptation_washing","outage_need_adaptation_comfort","outage_need_adaptation_lighting","outage_need_adaptation_info","outage_need_adaptation_comm","outage_need_adaptation_other","outage_need_adaptation_other_text","food_access_location_selected","food_access_location_other","healthcare_access_location_selected","healthcare_access_location_other","food_cooling_access_location_selected","food_cooling_access_location_other","cooking_access_location_selected","cooking_access_location_other","med_cooling_access_location_selected","med_cooling_access_location_other","healthcare_device_access_location_selected","healthcare_device_access_location_other","washing_access_location_selected","washing_access_location_other","comfort_access_location_selected","comfort_access_location_other","lighting_access_location_selected","lighting_access_location_other","info_access_location_selected","info_access_location_other","comm_access_location_selected","comm_access_location_other","other_task_location_selected","other_task_location_other","primary_reason_facility_selected","primary_reason_facility_other","same_facility_during_outage","closing_concerns","future_activity_contact","contact_first_name","contact_last_name","contact_phone","contact_email","survey_source_selected","survey_source_other","select","latitude","longitude"
+
+```{r}
+library(networkD3)
+library(dplyr)
+
+# Define the function
+create_sankey <- function(data, cols) {
+  # Check if the columns exist
+  if (!all(cols %in% colnames(data))) {
+    stop("One or more specified columns do not exist in the dataframe")
+  }
+
+  # Select the specified columns
+  df <- data[, cols]
+  
+  # Replace NAs with 'NA'
+  df[is.na(df)] <- "NA"
+  
+  # Get unique categories
+  categories <- unique(unlist(df))
+  print(categories)
+  print("colnames")
+  print(colnames(df))
+  nodes <- data.frame(name = categories)
+  
+  # Initialize an empty data frame for links
+  links <- data.frame()
+  print("ho")
+  # Populate the links
+  for (i in 1:(ncol(df) - 1)) {
+    source_column <- df[, i]
+    target_column <- df[, i + 1]
+    
+    for (j in 1:nrow(df)) {
+      source <- which(nodes$name == source_column[j])
+      target <- which(nodes$name == target_column[j])
+      print("yo")
+      length(source)
+      length(target)
+      # Ensure only one source and target match is found
+      if(length(source) == 1 & length(target) == 1) {
+        links <- rbind(links, data.frame(source = source - 1, target = target - 1, value = 1))
+      }
+    }
+  }
+  print("mm")
+  # Aggregate the values for each link
+  links <- aggregate(value ~ source + target, data = links, FUN = sum)
+  
+  # Create the Sankey diagram
+  sankeyNetwork(Links = links, Nodes = nodes, Source = "source", Target = "target", Value = "value", NodeID = "name", units = "people")
+}
+
+# Example usage
+cols <- c("combined1", "combined2", "combined3", "combined4")
+create_sankey(data_combined, cols_blue_black_food)
+
+create_sankey(df2, cols_test)
+
+c <- df2[,colnames(df2) %in% cols_test]
+c[is.na(c)] <- "missing" 
+create_sankey(c, cols_test)
+colnames(c)
+```
+
+
+### test on manual cleaning names
+```{r}
+# Install necessary packages
+# install.packages("cluster")
+# install.packages("stringdist")
+
+library(cluster)
+library(stringdist)
+
+pharmacy <- unique(df2 %>% select(contains("typical_pharmacy")) %>% unlist %>% strsplit(., ",\\s*") %>% unlist)
+print(pharmacy)
+# Remove any leading or trailing whitespace
+trimmed_list <- trimws(pharmacy) 
+trimmed_list <-trimmed_list[!is.na(trimmed_list)]
+
+
+```
+
+
+```{r}
+names_list <- c("Seattle VAMC", "Seattle V.A.M.C.", "Seattle VA Medical Center", "SEA VAMC", "International Community Health Services", "Int. Comm. Health Services")
+
+library(stringdist)
+library(dplyr)
+
+aggregate_names <- function(names_list, threshold = 0.2) {
+  # Create a distance matrix
+  dist_matrix <- stringdistmatrix(names_list, names_list, method = "jw")
+  
+  # Initialize a vector for aggregated names
+  aggregated_names <- names_list
+  
+  # Compare each name with every other name
+  for (i in seq_along(names_list)) {
+    for (j in seq_along(names_list)) {
+      if (i != j && dist_matrix[i, j] < threshold) {
+        # Use the shorter name as the representative
+        shorter_name <- ifelse(nchar(names_list[i]) < nchar(names_list[j]), names_list[i], names_list[j])
+        aggregated_names[names_list == names_list[j]] <- shorter_name
+      }
+    }
+  }
+  
+  # Create a data frame to map original names to aggregated names
+  name_mapping <- data.frame(original = names_list, aggregated = aggregated_names, stringsAsFactors = FALSE)
+  return(name_mapping)
+}
+
+# Example usage
+places <- c("Seattle VAMC", "Seattle V.A.M.C.", "Seattle VA Medical Center", "SEA VAMC", "International Community Health Services", "Int. Comm. Health Services")
+name_mapping <- aggregate_names(places)
+print(name_mapping)
+
+name_mapping  <- aggregate_names(trimmed_list )
+
+# Replace original names with aggregated names
+data_combined$place_pharmacy <- name_mapping$aggregated[match(data_combined$combined_pharmacy, name_mapping$original)]
+
+data_combined$place_pharmacy
+data_combined$combined_pharmacy
+```
+surprisingly 89 responses showed NA in typical pharmacy selected

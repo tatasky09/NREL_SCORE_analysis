@@ -1,0 +1,960 @@
+---
+title: "02_combined_association_analysis_11_18"
+author: "SimanNing"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+##downlad data from the server: https://app.box.com/file/1703518739734
+
+library(table1)
+library(tidyverse)
+load("D:/01PHD/000NREL_SCORE/04analysis/data/useful_set_11_29.RData") ##will load df2 exactly same
+df3 <- useful_set %>% mutate(across(where(~ is.numeric(.)), as.numeric))
+
+## make all columns in df3 that column names contains "idx_" to numeric
+idx <- grepl("idx",colnames(df3))
+df3[,idx] <- apply(df3[,idx], 2, function(x) as.numeric(as.character(x)))
+df3 <- df3 %>% 
+  mutate(idx_total.vi = rowSums(select(., starts_with("idx_")), na.rm = TRUE))
+
+df3$idx_total.vi.scale <- ((as.numeric(df3$idx_total.vi)- min(as.numeric(df3$idx_total.vi)))/(max(as.numeric(df3$idx_total.vi))-min(as.numeric(df3$idx_total.vi))) )
+table1 (~ idx_total.vi +idx_total.vi.scale, data = df3)
+
+df3_filled <- df3
+###fill NA values with missing
+
+
+df3_filled[is.na(df3_filled)] <- "missing"
+
+## do a similar order to all other columns that starts with 'location_use_frequency'
+for (col in colnames(df3)[grepl("location_use_frequency", colnames(df3))]) {
+  # Order the levels of the factor
+  df3[[col]] <- factor(df3[[col]], levels = c("Never", "A few times per year or less", "Monthly", "Weekly", "Daily"), ordered = TRUE)
+  # Rename the specific level "A few times per year or less" to "few/year"
+  levels(df3[[col]])[levels(df3[[col]]) == "A few times per year or less"] <- "Few/Year"
+}
+
+##replace NA with 'missing' and assign to df3_filled
+for (col in colnames(df3_filled)[grepl("location_use_frequency", colnames(df3_filled))]) {
+  # Order the levels of the factor
+  df3_filled[[col]] <- factor(df3_filled[[col]], levels = c("missing","Never", "A few times per year or less", "Monthly", "Weekly", "Daily"), ordered = TRUE)
+  # Rename the specific level "A few times per year or less" to "few/year"
+  levels(df3_filled[[col]])[levels(df3_filled[[col]]) == "A few times per year or less"] <- "Few/Year"
+}
+sum(is.na(df3_filled))
+sum(is.na(df3))
+
+#### demographic, household information
+table1(~ age  + gender + work_location + home_ownership + housing_type + household_size + household_race_selected + hispanic_latino_count + hh_income + education_level + condition_worsened_by_outage + electric_device_dependent + prescription_med + primary_transport_mode_selected + vehicle_count + energy_sources_selected + backup_energy_system + seattle_city_light_bill + seattle_city_light_discounts + greenup_participant + shutoff_notice + bill_affordability | neighborhood, data = df3)
+
+###blueksy frequency table       
+df3$location_use_frequency_community_center
+table1(~  location_use_frequency_pharmacy + location_use_frequency_grocery_store + location_use_frequency_convenience_store + location_use_frequency_food_bank + location_use_frequency_school + location_use_frequency_gas_station + location_use_frequency_community_center + location_use_frequency_worship + location_use_frequency_bank + location_use_frequency_doctor + location_use_frequency_dialysis + location_use_frequency_hardware_store + location_use_frequency_trusted_hh +location_use_frequency_community_center | neighborhood, data = df3)
+
+####black sky frequency         
+table1(~     shelf_stable_food_days + bottled_water_days + emergency_savings + power_outage_experience +  affordability_worry  +  relocation_option + community_outage_concern_selected + outage_need_adaptation_food + outage_need_adaptation_healthcare + outage_need_adaptation_food_cooling + outage_need_adaptation_cooking + outage_need_adaptation_washing + outage_need_adaptation_comfort + outage_need_adaptation_lighting + outage_need_adaptation_info + outage_need_adaptation_comm + primary_reason_facility_selected | neighborhood, data = df3) 
+
+colnames(df3)[idx]
+table1(~ idx_no_vehicle + idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education +  idx_children_6_to_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_language_other_than_eng + idx_renter + idx_non_white + idx_african_american+ idx_two_races+ idx_asian+ idx_hispanic_latino +  idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine + idx_total.vi |neighborhood, data=df3)
+df2$age <- as.numeric(df2$age)
+
+df3_clean <- df3 %>% filter(!is.na(location_use_frequency_dialysis))
+
+table1(~ idx_no_vehicle + idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education + idx_children_6_to_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_renter + idx_non_white+ idx_african_american + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine +idx_language_other_than_eng|location_use_frequency_dialysis, data=df3_clean)
+df3$location_use_frequency_dialysis
+```
+
+## Including Plots
+
+categorical and numerical data
+
+```{r pressure, echo=FALSE}
+##ggpairs to plot the df2 to show pair relationship
+library(GGally)
+drop_cols2 <- c("start_date" ,'end_date' , "address" ,  "user_language"   , "consent_to_participate",'ip_address' ,'duration_sec',"zip_code","city","state",  "future_activity_contact" ,  "survey_source_selected" ,   "select",   "longitude" ,"latitude" ,"Index" ,"ResponseId" ,"neighborhood","response_id"  ,'recorded_date'  )
+drop_cols3 <- c('household_race_selected', "address" ,  "user_language"   , "consent_to_participate","zip_code","city","state","emergency_savings_amount_selected",
+"household_race_multi", "household_race_american_indian","dist_channel
+" )
+##rule out any columns in df2 with more than 15 levels but are not numeric
+cols_more_15_levels <- names(df2)[sapply(df2, function(x) length(unique(x)) > 15 & !is.numeric(x))]
+cols_more_15_levels 
+
+df4 <- df3[,! colnames(df3) %in% drop_cols2 & ! colnames(df3) %in% drop_cols3 &  !colnames(df3) %in% cols_more_15_levels ]
+#make some numric columns if can be converted to numeric
+df4 <- df4[,sapply(df4, function(x) length(unique(x))) >=2 ]
+###find out that column names contains '_other'
+other_cols <- colnames(df4)[grepl("_other|typical_",colnames(df4))]
+
+df4 <- df4[,! colnames(df4) %in% other_cols]
+# add 'missing' to the cells that are NA
+
+
+```
+
+```{r pressure, echo=FALSE}
+###select a subset of columns with 'idx' or with 'frequency'
+idx_frequency_subset <- df4[,grepl("idx",colnames(df4)) | grepl("frequency",colnames(df4)) ]
+library(GGally)
+
+  # Columns to plot
+
+# svg("D:/01PHD/000NREL_SCORE/04analysis/data/output/ggpairs.svg",height=28,width=28)
+# ggpairs(idx_frequency_subset) 
+# dev.off()
+
+```
+
+```{r look in missing}
+###this produce the missing data in 'data' which is a subset of df2
+library(ggplot2) 
+library(naniar) 
+gg_miss_var(data)
+
+```
+
+
+```{r basic multinomial regression}
+
+##basic regression
+library(broom)
+library(dplyr)
+library(nnet)
+### do a model with multinomial regression
+levels(df3$location_use_frequency_grocery_store)  ## never is the reference
+mod1 <- multinom(location_use_frequency_grocery_store ~  idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education + idx_children_under_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_language_other_than_eng + idx_renter + idx_non_white + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine + idx_total.vi.scale, data = df3)
+#change the reference level to 'weekly'
+library(stargazer)
+stargazer(mod1, type = "text")
+
+##check VIF of the model
+library(car)
+mod1_l <-  lm(location_use_frequency_grocery_store ~  idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education + idx_children_6_to_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_language_other_than_eng + idx_renter + idx_non_white + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine + idx_total.vi.scale, data = df3)
+stargazer::stargazer(mod1_l, type = "text")
+vif(mod1_l)
+
+
+
+```
+
+```{r order logit regression}
+
+## find out all unique levels of all columns starts with 'location_use_frequency'
+for (col in colnames(df3)[grepl("location_use_frequency",colnames(df3))]) {
+  print(unique(df3[[col]]) )
+}
+
+##load library fro polr
+library(MASS)
+require(foreign)
+require(ggplot2)
+require(Hmisc)
+require(reshape2)
+##order logit regression
+mod2 <- polr(location_use_frequency_grocery_store ~  idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education + idx_children_under_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_language_other_than_eng + idx_renter + idx_non_white + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine +idx_total.vi.scale, data = df3)
+
+library(stargazer)
+stargazer(mod2, type = "text")
+
+```
+Reference: https://rpubs.com/camguild/803096 
+
+#### CART tree analysis
+
+Advantages
+
+If there is high non-linearity & a complex relationship between the dependent and independent variables, then a tree model will outperform other classical linear regression models (such as, LMs, GLMs, or GAMs).
+
+Trees are very easy to explain and even simpler to interpret than linear regression.
+
+It is believed that decision trees more closely mirror human decision-making than do classical regression approaches.
+
+Trees can be displayed graphically, and are easily interpreted even by a non-expert.
+
+Trees can handle data of different types, including continuous, categorical, ordinal, and binary. Transformations of the data are not required. For example, trees can easily handle qualitative predictors without the need to create dummy variables.
+
+Trees can be useful for detecting important variables, interactions, and identifying outliers. The larger the number of variables, the more valuable is the exploration using decision trees.
+
+Can handle missing data by identifying surrogate splits in the modeling process.
+Records with missing values are omitted by default.
+
+Disadvantages
+Trees generally do not have the same level of predictive accuracy as some of the other regression and classification approaches.
+
+Tree models have a tendency to overfit, that is, the error is fitted along with the data, and thus lead to over-interpretation.
+
+Trees can be very non-robust. That is, a small change in the data can cause a large change in the final estimated tree.
+
+Note: The predictive performance of trees can be substantially improved by aggregating many trees using methods like bagging, random forests, and boosting.
+
+```{r cart model}
+# Load required library
+# Load necessary libraries
+library(rpart)
+library(rpart.plot)
+
+# Load a larger dataset (replace with your dataset)
+# Example: Titanic dataset simulation
+set.seed(156)  # For reproducibility
+# data <- data.frame(
+#   Survived = factor(sample(c("No", "Yes","Maybe"), 200, replace = TRUE)),
+#   Pclass = factor(sample(c("1st", "2nd", "3rd","4th"), 200, replace = TRUE)),
+#   Sex = factor(sample(c("male", "female"), 200, replace = TRUE)),
+#   Age = factor(sample(c("child", "adult"), 200, replace = TRUE)),
+#   Fare = runif(200, min = 5, max = 500)  # Continuous variable
+# )
+
+
+###"location_use_frequency_pharmacy + location_use_frequency_grocery_store + location_use_frequency_convenience_store + location_use_frequency_food_bank + location_use_frequency_school + location_use_frequency_gas_station + location_use_frequency_community_center + location_use_frequency_worship + location_use_frequency_bank + location_use_frequency_doctor + location_use_frequency_dialysis + location_use_frequency_hardware_store + location_use_frequency_trusted_hh + idx_no_vehicle + idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education + idx_children_under_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_renter + idx_non_white + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine + idx_total.vi"
+
+##paste all columns starts with idx_ together with + sign
+paste0(colnames(idx_frequency_subset), collapse = " + ")
+
+data <- df3
+data$age <- as.numeric(data$age)
+## do a similar order to all other columns that starts with 'location_use_frequency'
+for (col in colnames(data)[grepl("location_use_frequency", colnames(data))]) {
+  # Order the levels of the factor
+  data[[col]] <- factor(data[[col]], levels = c("Never", "A few times per year or less", "Monthly", "Weekly", "Daily"), ordered = TRUE)
+  # Rename the specific level "A few times per year or less" to "few/year"
+  levels(data[[col]])[levels(data[[col]]) == "A few times per year or less"] <- "Few/Year"
+}
+
+# Train a CART model with adjusted control parameters for complexity
+cart_model <- rpart(
+  location_use_frequency_grocery_store~  idx_no_vehicle + idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education + idx_children_under_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_renter + idx_non_white + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine + idx_total.vi.scale + age +gender, 
+  data = data, 
+  method = "class", 
+  control = rpart.control(cp = 0.01, minsplit = 6, maxdepth = 10)
+)
+
+# Visualize the more complex decision tree
+rpart.plot(
+  cart_model, 
+  type = 3, 
+  extra = 102,  # Show probabilities and percentages
+  under = TRUE, 
+  fallen.leaves = TRUE, 
+  cex = 0.7
+)
+
+x1 <- 'idx_no_vehicle + idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education +idx_children_6_to_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_renter + idx_non_white +idx_african_american + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine + idx_language_other_than_eng+  idx_total.vi.scale'
+
+x2 <- 'idx_no_vehicle + idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education + idx_children_6_to_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_renter + idx_non_white+ idx_african_american + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine +idx_language_other_than_eng'
+
+x3 <- 'idx_no_vehicle + idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education + idx_members_over_65 + idx_renter + idx_non_white+ idx_african_american + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine +idx_language_other_than_eng' ##no kid information
+# Define a function for dynamic CART modeling
+create_cart_model <- function(y,x, data,minsplit = 5, maxdepth = 10, cp = 0.01) {
+  # Construct the formula dynamically
+  formula <- as.formula(paste(y, "~", x)) ##+ age + gender
+  # Train the CART model
+  cart_model <- rpart(
+    formula,
+    data = data,
+    method = "class",
+    control = rpart.control(cp = cp, minsplit = minsplit, maxdepth = maxdepth)
+  )
+  return(cart_model)
+
+}
+
+# Example Usage
+# Define your dataset
+# Assuming `data` is your dataset and `location_use_frequency_grocery_store` is one of its columns
+
+model_1 <- create_cart_model(
+  y = "location_use_frequency_gas_station", x = x2,
+  data = data,minsplit = 7, maxdepth = 8, cp = 0.01
+)
+
+###create a for loop that loop through all colnames starts with 'location_use_frequency' and create a model for each, store every model to a different model name like model1, model2, model3, etc
+for (col in colnames(df3_filled)[grepl("location_use_frequency",colnames(df3_filled))]) {
+  assign(paste0("model_", col), create_cart_model(y = col,x= x2, data = df3_filled))
+}
+
+
+
+
+
+# Function to create a CART plot with the response variable name in the title
+create_cart_plot <- function(model,y) {
+  png(paste0("D:/01PHD/000NREL_SCORE/04analysis/data/output/cart_model/",y,".png"), width = 2200, height = 900,res= 130)
+  rpart.plot(
+    model,
+    type = 3, 
+    extra = 102,  # Show probabilities and percentages
+    under = TRUE, 
+    box.palette="RdYlGn",
+    fallen.leaves = TRUE, 
+    cex = 0.7
+    ,main = y  # Add the response variable to the title
+  )    ####save plot to a file
+  
+  dev.off()
+}
+
+library(tidyverse)
+## use function to apply to different models to create decision trees
+create_cart_plot(model_location_use_frequency_grocery_store,"grocery store")
+create_cart_plot(model_location_use_frequency_pharmacy,"pharmacy")
+create_cart_plot(model_location_use_frequency_convenience_store,"convenience store")
+create_cart_plot(model_location_use_frequency_food_bank,"food bank")
+create_cart_plot(model_location_use_frequency_school,"school")
+create_cart_plot(model_location_use_frequency_gas_station,"gas station")
+create_cart_plot(model_location_use_frequency_community_center,"community center")
+create_cart_plot(model_location_use_frequency_worship,"worship")
+create_cart_plot(model_location_use_frequency_bank,"bank")
+create_cart_plot(model_location_use_frequency_doctor,"doctor")
+create_cart_plot(model_location_use_frequency_dialysis,"dialysis")
+create_cart_plot(model_location_use_frequency_hardware_store,"hardware store")
+create_cart_plot(model_location_use_frequency_trusted_hh,"trusted hh")
+
+```
+What Is Bagging?
+Bagging, an abbreviation for Bootstrap Aggregating, is a machine learning ensemble strategy for enhancing the reliability and precision of predictive models. It entails generating numerous subsets of the training data by employing random sampling with replacement. These subsets train multiple base learners, such as decision trees, neural networks, or other models.
+
+https://www.bu.edu/sph/files/2014/05/MorganCART.pdf 
+
+This part is not finished yet
+```{r TODO: bootstrap}
+set.seed(123)  # For reproducibility
+library(rpart)
+library(rpart.plot)
+
+
+
+############################### random forest
+# Example data
+if (!require(gbm)) install.packages("gbm") 
+library(gbm)
+library(randomForest)
+# Remove rows with missing values (example: removing rows with NA) 
+idx_frequency_subset_clean <- na.omit(idx_frequency_subset)
+
+##count how many NA in the data
+sum(is.na(df3_filled))
+##find out which columns contain NA
+colnames(idx_frequency_subset)[colSums(is.na(idx_frequency_subset)) > 0]
+### fill in missing with 'missing'
+idx_frequency_subset[is.na(idx_frequency_subset)] <- "missing"
+# Fit the Random Forest model
+rf_model <- randomForest(location_use_frequency_grocery_store ~ idx_no_vehicle + idx_lower_than_tract_median_income + idx_no_back_up_energy + idx_less_than_highschool_education +idx_children_6_to_18 + idx_children_under_5 + idx_single_parent_house + idx_members_over_65 + idx_renter + idx_non_white +idx_african_american + idx_hispanic_latino + idx_condition_worsened_by_blackout + idx_medical_device + idx_prescription_medicine + idx_language_other_than_eng+  idx_total.vi.scale, data = df3_filled, ntree = 500, mtry = 2, importance = TRUE)
+
+colnames(idx_frequency_subset)
+# Summary of the model
+print(rf_model)
+
+# Plot variable importance
+varImpPlot(rf_model, main = "Variable Importance for location_use_frequency_grocery_store")
+
+
+
+#### this one should use data that are not filled with missing
+### assign all values of 'missing' to NA
+df3_NA <- df3_filled
+df3_NA <- df3_NA %>% mutate(across(where(is.character), ~ na_if(., "missing")))
+
+##create a function to reproduce the above plots for any location use frequency variable
+create_rf_model <- function(y,x, data= df3_NA, ntree = 500, mtry = 2) {
+  # Construct the formula dynamically
+  formula <- as.formula(paste(y, "~", x))
+  # Train the Random Forest model
+  new.data <- data[,grepl("idx",colnames(data))| grepl(y,colnames(data))]
+  print(colnames(new.data))
+  ##make all variables as factors
+  new.data <- new.data %>% mutate(across(where(is.character | is.numeric()), as.factor))
+  new.data <- droplevels(new.data)
+  new.data1 <- na.omit(new.data)
+  print(dim(new.data1))
+  print("happy")
+
+  rf_model <- randomForest(
+    formula,
+    data = new.data1,
+    ntree = ntree,
+    mtry = mtry,
+    importance = TRUE, na.action = na.omit
+  )
+ # png(paste0("D:/01PHD/000NREL_SCORE/04analysis/data/output/random_forest_model/",y,".png"), width = 2200, height = 900,res= 130)
+
+  varImpPlot(rf_model, main = paste("Variable Importance for", y))
+  ###save the plot to a file
+  # png(paste0("D:/01PHD/000NREL_SCORE/04analysis/data/output/rf_model/",y,".png"))
+  #dev.off()
+  
+}
+
+create_rf_model("location_use_frequency_grocery_store",x3)
+create_rf_model("location_use_frequency_pharmacy",x2)
+create_rf_model("location_use_frequency_convenience_store",x2)
+create_rf_model("location_use_frequency_food_bank",x2)
+create_rf_model("location_use_frequency_school",x2)
+create_rf_model("location_use_frequency_gas_station",x2)
+create_rf_model("location_use_frequency_community_center",x2)
+create_rf_model("location_use_frequency_worship",x2)
+create_rf_model("location_use_frequency_bank",x2)
+create_rf_model("location_use_frequency_doctor",x2)
+create_rf_model("location_use_frequency_trusted_hh",x2)
+create_rf_model("location_use_frequency_hardware_store",x2)
+create_rf_model("location_use_frequency_dialysis",x2)
+
+library(tidyverse)
+## filter rows that have children under 5 and also need to go to dialysis frequently
+a <- df3_filled %>%
+  filter(! location_use_frequency_dialysis %in% c("Never","missing" )& idx_children_under_5 == 1)
+summary(a$age)
+summary(as.numeric(a$household_size))
+
+```
+
+```{r correlation}
+
+summary(df3_filled$location_use_frequency_dialysis )
+summary(df3_filled$location_use_frequency_hardware_store)
+summary(df3_filled$idx_total.vi)
+
+##create an association matrix of idx variables and plot out in a heatmap 
+library(corrplot)
+library(tidyverse)
+library(reshape2)
+idx_frequency_subset <- df3_filled[,grepl("idx",colnames(df3_filled))]
+idx_frequency_subset <- idx_frequency_subset[,-which(names(idx_frequency_subset) %in% c( "idx_total.vi", "idx_total.vi.scale"))]
+
+VI_NA<-read.csv("D:/01PHD/000NREL_SCORE/04analysis/data/Vulerability_Index_1129.csv") %>% select(starts_with("idx") )
+
+##remove NA in correlation
+
+correlation_matrix <- cor(VI_NA, use = "pairwise.complete.obs")
+## make the correlation matrix to a dataframe with var1 and var 2 and correlation, only three columns
+correlation_melt <- melt(correlation_matrix , na.rm = TRUE)
+##round all the values to 0.01
+correlation_melt$value <- round(correlation_melt$value,3)
+
+write.csv(correlation_melt,"D:/01PHD/000NREL_SCORE/04analysis/data/output/correlation_melt_11_26.csv")
+
+##corplot also label the association with numbers in cell
+corrplot(correlation_matrix, method = "color",  order = "hclust", tl.cex = 0.7, tl.col = "black")
+
+
+```
+
+```{r ggplot}
+library(ggplot)
+###create a function to make barplot for any location use frequency variable and idx variables
+##do anova test to see if the idx variables are significantly different in the location use frequency variable
+create_barplot <- function(y,x, data= df3_filled) {
+  # Construct the formula dynamically
+  formula <- as.formula(paste(y, "~", x))
+  # Perform the ANOVA test
+  anova_result <- aov(formula, data = data)
+  # Create a barplot
+  ggplot(data, aes(x = !!sym(x), fill = !!sym(x))) +
+    geom_bar() +
+    labs(title = paste("Barplot of", y, "by", x)) +
+    theme_minimal()
+  return(anova_result)
+}
+
+for (col in colnames(df3_filled)[grepl("idx",colnames(df3_filled))]) {
+  create_barplot("location_use_frequency_grocery_store", col)
+}
+
+
+# Step 1: Create a contingency table
+contingency_table <- table(df3_filled$location_use_frequency_dialysis, df3$idx_african_american)
+
+# Print the contingency table
+print(contingency_table)
+
+# Step 2: Perform Chi-Square test
+chi_square_result <- chisq.test(contingency_table,simulate.p.value = TRUE)
+
+# Print the Chi-Square test result
+print(chi_square_result)
+
+
+
+```
+
+```{r random forest}
+create_rf_model("location_use_frequency_dialysis")
+
+```
+
+```{r random forest}
+##find out df3_filled that idx_hisnpanic_latino is 1 and race is black
+library(tidyverse)
+a <- df3_filled %>%
+  filter(idx_hispanic_latino == 1 & grepl("Black",household_race_selected))
+unique(df3$household_race_selected)
+a2 <- df3_filled %>%
+  filter(idx_hispanic_latino == 1 )
+a3 <- df3_filled %>%
+  filter( grepl("Black",household_race_selected))
+a4 <- df3_filled %>%
+  filter( grepl("Black",household_race_selected) & location_use_frequency_dialysis != "Never")
+a4 <- df3_filled %>%
+  filter(location_use_frequency_dialysis != "Never") 
+
+t <-a4 %>% group_by(household_race_selected,location_use_frequency_dialysis) %>% tally() %>% print()
+
+```
+
+```{r random forest}
+```
+
+```{r}
+
+
+```
+
+
+```{r PCA}
+### create PCA analysis for the columns with indx in data
+
+if (!require(FactoMineR)) install.packages("FactoMineR")
+if (!require(factoextra)) install.packages("factoextra")
+
+library(FactoMineR)
+library(factoextra)
+
+
+# Example binary dataset
+set.seed(123)  # For reproducibility
+
+data <- idx_frequency_subset[,grepl("idx",colnames(idx_frequency_subset))]
+#standardize the data
+data$idx_total.vi <- scale(data$idx_total.vi )
+# Perform PCA
+pca_result <- PCA(data, graph = FALSE)
+
+# Visualize the eigenvalues (scree plot)
+fviz_eig(pca_result)
+
+# Visualize the variables on the PCA dimensions
+fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("blue", "green", "red"))
+
+# Visualize dimensions 2 and 3
+fviz_pca_var(pca_result, axes = c(3, 4), 
+             col.var = "contrib",  # Color by contributions
+             gradient.cols = c("blue", "green", "red"), 
+             repel = TRUE)  # Avoid label overlap
+
+# Visualize individuals on the PCA dimensions
+fviz_pca_ind(pca_result, col.ind = "cos2", gradient.cols = c("blue", "green", "red"))
+fviz_pca_ind(pca_result, axes = c(3, 4), col.ind = "cos2", gradient.cols = c("blue", "green", "red"))
+
+
+
+###do another round without the total score
+data <- idx_frequency_subset[,grepl("idx",colnames(idx_frequency_subset))]
+data <- data[,-which(names(data) == "idx_total.vi")]
+pca_result <- PCA(data[], graph = FALSE)
+
+# Visualize the eigenvalues (scree plot)
+fviz_eig(pca_result)
+print(pca_result)
+# Visualize the variables on the PCA dimensions
+fviz_pca_var(pca_result, col.var = "contrib", gradient.cols = c("blue", "green", "red"))
+
+# Visualize dimensions 2 and 3
+fviz_pca_var(pca_result, axes = c(3, 4), 
+             col.var = "contrib",  # Color by contributions
+             gradient.cols = c("blue", "green", "red"), 
+             repel = TRUE)  # Avoid label overlap
+
+# Visualize individuals on the PCA dimensions
+fviz_pca_ind(pca_result, col.ind = "cos2", gradient.cols = c("blue", "green", "red"))
+fviz_pca_ind(pca_result, axes = c(3, 4), col.ind = "cos2", gradient.cols = c("blue", "green", "red"))
+
+```
+
+2. Arrows (Variables)
+Each arrow represents a variable in the dataset.
+Length of Arrow:
+Longer arrows indicate stronger contributions of that variable to the principal components (high variance explained by this variable).
+Direction of Arrow:
+The direction of an arrow shows its correlation with the principal components.
+Variables pointing in the same direction are positively correlated.
+Variables pointing in opposite directions are negatively correlated.
+Variables orthogonal (perpendicular) to each other are uncorrelated.
+
+```{r Cramers V, warning=FALSE}
+
+
+# Function to calculate Cramér's V
+cramers_v <- function(x, y) {
+  chi2 <- chisq.test(table(x, y),simulate.p.value =TRUE, B = 1000)
+  n <- sum(chi2$observed)
+  min_dim <- min(dim(chi2$observed)) - 1
+  sqrt(chi2$statistic / (n * min_dim))
+}
+data1 <- df3 %>%  mutate(across(where(is.character), ~ na_if(., "missing")))%>% mutate(across(where(~ !is.numeric(.)), as.factor))
+###drop columns that are in drop_cols
+data1 <- data1[,! colnames(data1) %in% drop_cols2 & ! colnames(data1) %in% drop_cols3 & !grepl("_other|typical_",colnames(data1))]
+
+library(dplyr)
+library(purrr)
+### convert all columns to factor
+
+
+###make all variables as factor regardless of numeric or character
+data2 <- data1 %>% mutate(across(everything(), as.factor)) %>% 
+  mutate(across(where(is.factor), ~ {
+    # Check if factor has more than 20 levels
+    if (nlevels(.x) > 20 ) {
+      # Try converting to numeric
+      numeric_values <- as.numeric(as.character(.x))
+      
+      # If successful, return numeric; if not, return character
+      if (all(!is.na(numeric_values))) {
+        return(numeric_values)
+      } else {
+        return(as.character(.x))
+      }
+    } else {
+      # Return the original factor if levels are <= 20
+      return(.x)
+    }
+  }))
+
+###for drop columns that only have one level
+# data2 <- data2[, sapply(data2, function(x) nlevels(x) > 1)]
+
+categorical_vars <- names(data2)[sapply(data2, is.factor)]
+combinations <- combn(categorical_vars, 2, simplify = FALSE)
+nlevels(data2$idx_children_6_to_18 )
+
+###
+# Step 3: Identify categorical variables 
+categorical_vars <- names(data2)[sapply(data2, is.factor)] 
+# Step 4: Filter out variables with fewer than two levels categorical_vars <- 
+categorical_vars[sapply(data2[categorical_vars], function(x) nlevels(x) >= 2)] # Step 5: Create combinations of categorical variables 
+combinations <- combn(categorical_vars, 2, simplify = FALSE) # Step 6: Calculate Cramér's V for each pair using the custom function 
+# Calculate Cramér's V for each pair
+cramers_v_results <- sapply(combinations, function(pair) {
+  print(pair)
+  tryCatch({
+    cramers_v(data2[[pair[1]]], data2[[pair[2]]])
+  }, error = function(e) {
+    message("Error: ", e$message)
+    return(NA)
+  })
+  
+})
+
+
+# Create a matrix to show results
+cramers_v_matrix <- matrix(NA, nrow = length(categorical_vars), ncol = length(categorical_vars),
+                           dimnames = list(categorical_vars, categorical_vars))
+
+for (i in seq_along(combinations)) {
+  pair <- combinations[[i]]
+  cramers_v_matrix[pair[1], pair[2]] <- cramers_v_results[i]
+  cramers_v_matrix[pair[2], pair[1]] <- cramers_v_results[i] # Symmetric matrix
+}
+
+# Load necessary packages
+library(ggplot2)
+library(reshape2)
+
+# Assuming `cramers_v_matrix` is your matrix of Cramér's V values
+# Melt the matrix to long format
+cramers_v_melt <- melt(cramers_v_matrix, na.rm = TRUE)
+##round all the values to 0.01
+cramers_v_melt$value <- round(cramers_v_melt$value,2)
+cramers_v_melt <- cramers_v_melt %>% filter(value > 0, value <1)
+
+###find rows in var1 and var2 that starts with idx or location_use
+
+
+cramers_v_melt_sim <- cramers_v_melt %>% filter(grepl("location_use",Var1),grepl("idx|location_use",Var2))
+write.csv(cramers_v_melt_sim,"D:/01PHD/000NREL_SCORE/04analysis/data/output/cramers_v_melt_12-04.csv")
+# View the reshaped data
+head(cramers_v_melt)
+# Create heatmap with ggplot2
+cramers_v_heatmap<- ggplot(cramers_v_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "blue", high = "red", name = "Cramér's V") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  labs(x = "Variable 1", y = "Variable 2", title = "Cramér's V Heatmap") +
+  geom_text(aes(label = round(value, 2)), size = 2, color = "black")
+ggsave(filename = "D:/01PHD/000NREL_SCORE/04analysis/data/output/cramers_v_heatmap.jpg", plot = cramers_v_heatmap, width = 16, height = 12, dpi = 300)
+cramers_v_heatmap
+
+
+
+```
+
+
+
+
+```{r test one by one}
+# Install nnet package if not already installed
+
+
+# Load necessary libraries
+if (!require(nnet)) install.packages("nnet")
+if (!require(MASS)) install.packages("MASS")
+if (!require(officer)) install.packages("officer")
+library(tidyverse)
+library(nnet)
+library(MASS)
+library(officer)
+
+# Initialize an empty list to store models and null variables
+models <- list()
+null_variables <- c()
+
+# Create a new Word document
+doc <- read_docx()
+
+# Fit one-to-one models for each predictor
+for (var in colnames(data[, !colnames(data) %in% c("location_use_frequency_grocery_store")])) {
+  # Skip the response column
+  formula <- as.formula(paste("location_use_frequency_grocery_store ~", var))
+  print(formula)
+  
+  model <- tryCatch({
+    multinom(formula, data = data)
+  }, error = function(e) {
+    message("Error: ", e$message)
+    return(NULL)
+  })
+  
+  # If the model fitting was unsuccessful, proceed to the next variable and record the variable
+  if (is.null(model)) {
+    null_variables <- c(null_variables, var)
+    next
+  }
+  
+  models[[var]] <- model
+  print(models[[var]])
+  
+  # Add model content to the Word document
+  doc <- doc %>%
+    body_add_par(paste("Model for predictor:", var), style = "heading 1") %>% 
+    body_add_par("Formula:", style = "Normal") %>% 
+    body_add_par(paste(as.character(formula), collapse = " "), style = "Normal") %>%
+    body_add_par("Model Summary:", style = "Normal") %>% 
+    body_add_par(paste(capture.output(summary(model)), collapse = "\n"), style = "Normal") %>%
+    body_add_par(paste("AIC:", AIC(model)), style = "Normal")
+}
+
+# Save the Word document
+print(doc, target = "D:/01PHD/000NREL_SCORE/04analysis/data/output/regression_output/models_summary.docx")
+
+print("Models' content has been saved to 'models_summary.docx'")
+
+```
+
+################below is not complete- issues in the code has not been solved
+
+
+```{r}
+model_aics <- sapply(models, AIC)
+print(model_aics)
+
+# Best single predictor based on AIC
+best_single_predictor <- names(which.min(model_aics))
+print(paste("Best single predictor:", best_single_predictor))
+
+# Full model
+# full_model <- multinom(location_use_frequency_grocery_store ~ ., data = data)
+
+full_formula <- as.formula(paste("location_use_frequency_grocery_store ~ . ")) 
+full_formula
+full_model <- multinom(full_formula , data = data)
+                                                                                                                         
+                                                                                                                         
+# Stepwise model selection (both directions)
+if (!require(MASS)) install.packages("MASS")
+library(MASS)
+best_model <- stepAIC(full_model, direction = "both")
+
+# Summary of the best model
+summary(best_model)
+
+
+```
+
+
+```{r regularization}
+
+library(nnet)
+
+# One-Hot Encoding
+one_hot_data <- model.matrix(location_use_frequency_grocery_store ~ . - 1, data)
+response <- data$location_use_frequency_grocery_store
+
+# Fit the multinom model
+full_model <- multinom(response ~ ., data = as.data.frame(one_hot_data))
+
+
+```
+
+
+```{r test one by one}
+
+# Load necessary libraries
+if (!require(nnet)) install.packages("nnet")
+if (!require(MASS)) install.packages("MASS")
+
+library(nnet)
+library(MASS)
+
+automated_multinom <- function(data, response_var) {
+  # Ensure the response variable is a factor
+  data[[response_var]] <- as.factor(data[[response_var]])
+  
+  # Extract predictor variables
+  predictors <- setdiff(colnames(data), response_var)
+  
+  # Store individual models and null variables
+  models <- list()
+  null_variables <- c()
+  
+  # Fit one-to-one models for each predictor
+  for (var in predictors) {
+    formula <- as.formula(paste(response_var, "~", var))
+    print(formula)
+    
+    # Fit the multinom model and handle errors
+    model <- tryCatch({
+      multinom(formula, data = data)
+    }, error = function(e) {
+      message("Error: ", e$message)
+      return(NULL)
+    })
+    
+    # If the model fitting was unsuccessful, proceed to the next variable and record the variable
+    if (is.null(model)) {
+      null_variables <- c(null_variables, var)
+      next
+    }
+    
+    models[[var]] <- model
+    print(models[[var]])
+  }
+  
+  print("ho")
+  # Compare models using AIC
+  model_aics <- sapply(models, AIC, simplify = TRUE, USE.NAMES = TRUE)
+  print("AIC for individual models:")
+  print(model_aics)
+  
+  # Identify the best single predictor
+  best_single_predictor <- names(which.min(model_aics))
+  print(paste("Best single predictor:", best_single_predictor))
+  
+  # Fit a full model with all predictors excluding null variables
+  full_formula <- as.formula(paste(response_var, "~ . -", paste(null_variables, collapse = " - ")))
+  full_model <- multinom(full_formula, data = data)
+  
+  # Stepwise model selection for the best-fit model
+  best_model <- stepAIC(full_model, direction = "both", trace = FALSE)
+  
+  # Output the best model summary and AIC
+  print("Best-fit model summary:")
+  print(summary(best_model))
+  print(paste("AIC of the best-fit model:", AIC(best_model)))
+  
+  # Return the best model and related metrics
+  list(
+    best_model = best_model,
+    best_predictor = best_single_predictor,
+    aic_values = model_aics,
+    null_variables = null_variables
+  )
+}
+
+
+# Example Usage
+result <- automated_multinom(data = df4, response_var = 'location_use_frequency_grocery_store')
+
+
+```
+
+
+
+
+```{r}
+# Load required libraries
+if (!require(nnet)) install.packages("nnet")
+if (!require(MASS)) install.packages("MASS")
+
+library(nnet)
+library(MASS)
+
+# Define the function
+automated_multinom <- function(data, response_var) {
+  # Ensure the response variable is a factor
+  data[[response_var]] <- as.factor(data[[response_var]])
+  
+  # Extract predictor variables
+  predictors <- setdiff(colnames(data), response_var)
+  
+  # Store individual models
+  models <- list()
+  
+  # Fit one-to-one models for each predictor
+  for (var in predictors) {
+    formula <- as.formula(paste(response_var, "~", var))
+    print(formula)
+  # Fit the multinom model and handle errors
+    model <- tryCatch({
+      multinom(formula, data = data)
+    }, error = function(e) {
+      message("Error: ", e$message)
+      return(NULL)
+    })
+    # If the model fitting was unsuccessful, proceed to the next variable 
+    if (is.null(model)) next 
+    models[[var]] <- model 
+    print(models[[var]])
+  }
+  
+  print("ho")
+  # Compare models using AIC
+  model_aics <- sapply(models, AIC)
+  print("AIC for individual models:")
+  print(model_aics)
+  
+  # Identify the best single predictor
+  best_single_predictor <- names(which.min(model_aics))
+  print(paste("Best single predictor:", best_single_predictor))
+  
+  # Fit a full model with all predictors
+  full_formula <- as.formula(paste(response_var, "~ ."))
+  full_model <- multinom(full_formula, data = data)
+  
+  # Stepwise model selection for the best-fit model
+  best_model <- stepAIC(full_model, direction = "both", trace = FALSE)
+  
+  # Output the best model summary and AIC
+  print("Best-fit model summary:")
+  print(summary(best_model))
+  print(paste("AIC of the best-fit model:", AIC(best_model)))
+  
+  # Return the best model and related metrics
+  list(
+    best_model = best_model,
+    best_predictor = best_single_predictor,
+    aic_values = model_aics
+  )
+}
+
+
+result <- automated_multinom(data = df4, response_var = 'location_use_frequency_grocery_store')
+# Access the best model
+best_model <- result$best_model
+
+```
+
