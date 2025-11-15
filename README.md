@@ -1,5 +1,7 @@
 ## SCORE Project
-The SCORE project, funded by the U.S. Department of Energy, develops a new method for integrating resilience, social equity, and clean energy planning in Seattle. In partnership with Seattle City Light (SCL), NREL, and community organizations, the project evaluates where solar-plus-storage systems should be placed to maintain access to essential services during power outages—especially in environmental justice communities. While NREL provides an analytic siting approach based on technical and spatial data, the University of Washington team examines how community-driven insights reshape utility investment priorities by capturing needs that traditional models overlook, such as proximity, affordability, transit access, and household-specific vulnerabilities.
+The SCORE project develops a new method for integrating resilience, social equity, and clean energy planning in Seattle. In partnership with Seattle City Light (SCL), NREL, and community organizations, the project evaluates where solar-plus-storage systems should be placed to maintain access to essential services during power outages—especially in environmental justice communities. While NREL provides an analytic siting approach based on technical and spatial data, the University of Washington team examines how community-driven insights reshape utility investment priorities by capturing needs that traditional models overlook, such as proximity, affordability, transit access, and household-specific vulnerabilities.
+
+To address this gap, we conducted a digital survey and focus groups with households in the Duwamish Valley to understand their needs, preferences, and sensitivities under both blue-sky (everyday) and black-sky (outage) conditions. Quantitative and qualitative findings reveal that community members prioritize a distinct set of critical service locations—such as grocery stores, community centers, and gas stations—based on factors including household needs, proximity, affordability, transit access, quality of services, and frequency of use. These priorities differ substantially from analytically identified sites that rely solely on spatial and infrastructural data. Our results demonstrate that community engagement improves the accuracy and social relevance of resilience planning and highlights opportunities for utilities to integrate local knowledge into siting decisions. Ultimately, community-engaged electric utility planning can help reduce inequities and mitigate the social impacts of future power outages.
 
 Figure 1: Geographic Map for the Survey Area
 
@@ -34,36 +36,25 @@ Figure 2: Vulnerability to Power Outages --based upon service dependency
 HISDP (high impact service dependent population) \--\> (at least 1
 category dependent)
 
-Table 3: Different Location Types with different Travel Time
+Table 2: Different Location Types with different Travel Time
 
-  ------------------------------------------------------------------------
-  poi type                         total closest count        \% Selecting
-                                   count               Closest Facility by
-                                                               Travel Time
-  --------------------------- ---------- ------------- -------------------
-  [library]{.mark}                    44            30              68.18%
+| POI Type                            | Total Count | Closest Count | % Selecting Closest Facility |
+|-------------------------------------|-------------|----------------|-------------------------------|
+| Library                             | 44          | 30             | 68.18%                        |
+| Community Center                    | 99          | 34             | 34.34%                        |
+| Dialysis Center (Typical Selected)  | 20          | 6              | 30.00%                        |
+| Food Bank                           | 74          | 22             | 29.73%                        |
+| Doctor                              | 86          | 24             | 27.91%                        |
+| School                              | 74          | 12             | 16.22%                        |
+| Gas Station                         | 174         | 28             | 16.09%                        |
+| Worship Place                       | 51          | 8              | 15.69%                        |
+| Pharmacy                            | 141         | 20             | 14.18%                        |
+| Convenience Store                   | 121         | 17             | 14.05%                        |
+| Grocery Store                       | 214         | 26             | 12.15%                        |
 
-  [community center]{.mark}           99            34              34.34%
 
-  [typical dialysis center            20             6              30.00%
-  selected]{.mark}                                     
-
-  food bank                           74            22              29.73%
-
-  doctor                              86            24              27.91%
-
-  school                              74            12              16.22%
-
-  gas station                        174            28              16.09%
-
-  worship place                       51             8              15.69%
-
-  [pharmacy]{.mark}                  141            20              14.18%
-
-  convenience store                  121            17              14.05%
-
-  [grocery store]{.mark}             214            26              12.15%
-  ------------------------------------------------------------------------
+Figure 3: Proximity Map (to illustrate that not all locations are
+dependent on proximity)
 
 <img src="images/media/image5.png" alt="Description of image 5" width="400" />
 <img src="images/media/image6.png" alt="Description of image 6" width="400" />
@@ -75,8 +66,7 @@ Table 3: Different Location Types with different Travel Time
 <img src="images/media/image12.png" alt="Description of image 12" width="400" />
 <img src="images/media/image13.png" alt="Description of image 13" width="400" />
 
-Figure 3: Proximity Map (to illustrate that not all locations are
-dependent on proximity)
+
 
 Figure 4: **Categorized responses to the question "In less than two
 sentences, please describe what you would be most worried or concerned
@@ -93,6 +83,7 @@ and one stated they were open to relocating but they did not provide
 their first choice.**
 
 <img src="images/media/image15.png" alt="Description of image 15" width="800" />
+
 
 
 
