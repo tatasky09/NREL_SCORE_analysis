@@ -1,5 +1,5 @@
 ## SCORE Project
-The SCORE project develops a new method for integrating resilience, social equity, and clean energy planning in Seattle. In partnership with Seattle City Light (SCL), NREL, and community organizations, the project evaluates where solar-plus-storage systems should be placed to maintain access to essential services during power outages—especially in environmental justice communities. While NREL provides an analytic siting approach based on technical and spatial data, the University of Washington team examines how community-driven insights reshape utility investment priorities by capturing needs that traditional models overlook, such as proximity, affordability, transit access, and household-specific vulnerabilities.
+The SCORE project develops a new method for integrating resilience, social equity, and clean energy planning in Seattle. In partnership with Seattle City Light (SCL) and community organizations, the project evaluates where solar-plus-storage systems should be placed to maintain access to essential services during power outages—especially in environmental justice communities. The University of Washington team examines how community-driven insights reshape utility investment priorities by capturing needs that traditional models overlook, such as proximity, affordability, transit access, and household-specific vulnerabilities.
 
 To address this gap, we conducted a digital survey and focus groups with households in the Duwamish Valley to understand their needs, preferences, and sensitivities under both blue-sky (everyday) and black-sky (outage) conditions. Quantitative and qualitative findings reveal that community members prioritize a distinct set of critical service locations—such as grocery stores, community centers, and gas stations—based on factors including household needs, proximity, affordability, transit access, quality of services, and frequency of use. These priorities differ substantially from analytically identified sites that rely solely on spatial and infrastructural data. Our results demonstrate that community engagement improves the accuracy and social relevance of resilience planning and highlights opportunities for utilities to integrate local knowledge into siting decisions. Ultimately, community-engaged electric utility planning can help reduce inequities and mitigate the social impacts of future power outages.
 
@@ -83,6 +83,7 @@ and one stated they were open to relocating but they did not provide
 their first choice.**
 
 <img src="images/media/image15.png" alt="Description of image 15" width="800" />
+
 
 
 
