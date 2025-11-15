@@ -3,10 +3,11 @@ The SCORE project, funded by the U.S. Department of Energy, develops a new metho
 
 Figure 1: Geographic Map for the Survey Area
 
-![](images/media/image1.png){width="1.503961067366579in"
-height="2.750041557305337in"}![](images/media/image2.png){width="4.060640857392826in"
-height="2.7291754155730534in"}![](images/media/image3.png){width="5.637299868766404in"
-height="3.9479166666666665in"}
+
+
+<img src="images/media/image1.png" alt="Description of image 1" width="800" />
+<img src="images/media/image2.png" alt="Description of image 2" width="800" />
+<img src="images/media/image3.png" alt="Description of image 3" width="800" />
 
 Table 2: Demographic Comparison between Census Data of Study Area and
 Survey Sample (methodology)
@@ -28,7 +29,7 @@ Survey Sample (methodology)
 
 
 Figure 2: Vulnerability to Power Outages --based upon service dependency
-![](images/media/image4.png){width="6.5in" height="5.197915573053368in"}
+![](images/media/image4.png)
 
 HISDP (high impact service dependent population) \--\> (at least 1
 category dependent)
@@ -64,16 +65,15 @@ Table 3: Different Location Types with different Travel Time
   [grocery store]{.mark}             214            26              12.15%
   ------------------------------------------------------------------------
 
-![](images/media/image5.png){width="2.0in"
-height="3.0in"}![](images/media/image6.png){width="2.0in"
-height="3.0in"}![](images/media/image7.png){width="2.0in"
-height="3.0in"}![](images/media/image8.png){width="2.0in"
-height="3.0in"}![](images/media/image9.png){width="2.0in"
-height="3.0in"}![](images/media/image10.png){width="2.0in"
-height="3.0in"}![](images/media/image11.png){width="2.0in"
-height="3.0in"}![](images/media/image12.png){width="2.0in"
-height="3.0in"}![](images/media/image13.png){width="2.0in"
-height="3.0in"}
+<img src="images/media/image5.png" alt="Description of image 5" width="400" />
+<img src="images/media/image6.png" alt="Description of image 6" width="400" />
+<img src="images/media/image7.png" alt="Description of image 7" width="400" />
+<img src="images/media/image8.png" alt="Description of image 8" width="400" />
+<img src="images/media/image9.png" alt="Description of image 9" width="400" />
+<img src="images/media/image10.png" alt="Description of image 10" width="400" />
+<img src="images/media/image11.png" alt="Description of image 11" width="400" />
+<img src="images/media/image12.png" alt="Description of image 12" width="400" />
+<img src="images/media/image13.png" alt="Description of image 13" width="400" />
 
 Figure 3: Proximity Map (to illustrate that not all locations are
 dependent on proximity)
@@ -82,9 +82,7 @@ Figure 4: **Categorized responses to the question "In less than two
 sentences, please describe what you would be most worried or concerned
 about during a long-term power outage in your home and why."**
 
-![](images/media/image14.png){width="6.5in" height="4.0625in"}
-
-
+<img src="images/media/image14.png" alt="Description of image 14" width="800" />
 
 Figure 5: **Responses to the question "Please select all locations where
 you might consider relocating for the duration of the outage." Responses
@@ -94,6 +92,7 @@ relocate anywhere that accepted pets, one stated their office/workplace,
 and one stated they were open to relocating but they did not provide
 their first choice.**
 
-![](images/media/image15.png){width="6.5in" height="4.0625in"}
+<img src="images/media/image15.png" alt="Description of image 15" width="800" />
+
 
 
